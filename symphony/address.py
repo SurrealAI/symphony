@@ -20,7 +20,7 @@ class AddressAPI(object):
         self.role = os.environ['SYMPHONY_ROLE']
         pass
 
-    def request(service_name):
+    def request(self, service_name):
         """
         Returns host-port to the process requesting the service named <service_name>
         Args:
@@ -29,7 +29,7 @@ class AddressAPI(object):
         """
         pass
 
-    def provide(service_name):
+    def provide(self, service_name):
         """
         Returns host-port to the process providing the service named <service_name>
         Args:
