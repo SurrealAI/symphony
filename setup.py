@@ -6,16 +6,13 @@ from setuptools import setup
 #     with open(os.path.join(os.path.dirname(__file__), fname)) as f:
 #         return f.read().strip()
 
-# TODO: I only made changes that I know needs to happen, 
-# for things I don't know I commented them out, etc. 
-# @Jim you need to edit this file
 
 setup(
-    name='Symphony',
+    name='symphony',
     version='0.0.1',
-    author='Stanford Vision and Learning Lab',
+    author='Surreal AI team',
     url='https://github.com/SurrealAI/symphony',
-    description='(TODO: Jim) Stanford University Repository for Reinforcement Algorithms',
+    description='a distributed process orchestration platform that supports both laptop and major cloud providers',
     # long_description=read('README.rst'),
     # keywords=['Reinforcement Learning',
     #           'Deep Learning',
@@ -30,7 +27,7 @@ setup(
     #     ]
     # },
     classifiers=[
-        "Development Status :: 2 - Pre-Alpha",
+        "Development Status :: 3 - Alpha",
         # "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "Environment :: Console",
         "Programming Language :: Python :: 3"
