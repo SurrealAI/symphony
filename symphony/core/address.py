@@ -7,6 +7,26 @@ class AddressDeclarationError(Exception):
     pass
 
 
+class AddressBookData(object):
+    def __init__(self):
+        self.data = {'services': {}}
+        self.services = self.data['services']
+
+    def add_provider(self, name, host, port):
+        entry = self.services.get(name, {})
+        entry['provider_host'] = host
+        entry['provider_port'] = port
+        self.services[name] = entry
+
+    def add_requester(self, name, host, port):
+        entry = self.services.get(name, {})
+        entry['requester_host'] = host
+        entry['requester_port'] = port
+        self.services[name] = entry
+
+    def dumps(self):
+        return json.dumps(self.data)
+
 class AddressAPI(object):
     """
     Class that manages network addresses
@@ -121,7 +141,8 @@ class AddressBook(AddressAPI):
         services = {}
         data = json.loads(data)
         entries = data['services']
-        for entry in entries:
+        for name in entries:
+            entry = entries[name]
             if 'provider_host' in entry:
                 provider_host = entry['provider_host']
                 provider_port = int(entry['provider_port'])
@@ -134,7 +155,7 @@ class AddressBook(AddressAPI):
             else:
                 requester_host = None
                 requester_port = None
-            services[entry['name']] = AddressBookService( service_name=entry['name'], 
+            services[name] = AddressBookService(service_name=name, 
                 process_role=self.role, verbose=self.verbose, 
                 provider_host=provider_host, provider_port=provider_port, 
                 requester_host=requester_host, requester_port=requester_port)

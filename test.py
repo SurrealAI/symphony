@@ -9,29 +9,29 @@ import json
 
 os.environ['SYMPHONY_ROLE'] = 'testing'
 os.environ['SYMPHONY_AB_DATA'] = json.dumps({
-    'services': [
-        {
-            'name': 'backend_1',
+    'services': {
+        'backend_1' :{
             'provider_host': 'localhost',
             'provider_port': 7003,
             'requester_host': 'localhost',
             'requester_port': 7004,
         },
-        {
-            'name': 'backend_2',
+        'backend_2' :{
             'provider_host': 'hello',
             'provider_port': 7005,
             # 'requester_host': 'localhost'
             # 'requester_port': '7003',
         },
-        {
-            'name': 'backend_3',
+        'backend_3': {
             # 'provider_host': 'localhost',
             # 'provider_port': '7003',
             'requester_host': 'world',
             'requester_port': 8005,
         },
-    ]})
+    }})
+
+### Inside the process that is running
+from symphony import AddressBook
 
 ab = AddressBook(verbose=False)
 
