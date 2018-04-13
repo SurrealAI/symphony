@@ -69,7 +69,7 @@ class KubeIntraClusterService(KubeService):
             },
             'spec': {
                 'ports': [{'port': port}],
-                'selector': {'binds': name},
+                'selector': {'service-' + name: 'provide'},
             },
         }
 
@@ -88,7 +88,7 @@ class KubeCloudExternelService(KubeService):
             },
             'spec': {
                 'ports': [{'port': port}],
-                'selector': {'exposes': name},
+                'selector': {'service-' + name: 'expose'},
             },
         }
 
@@ -210,6 +210,13 @@ class KubePodYML(KubeConfigYML):
         pod_yml.add_container(container_yml)
         return pod_yml
 
+    def add_labels(self, **kwargs):
+        for k in kwargs:
+            self.data['metadata']['labels'][k] = v
+
+    def add_label(self, key, val):
+        self.data['metadata']['labels'][key] = val
+
     def restart_policy(self, policy):
         assert policy in ['Always', 'OnFailure', 'Never']
         self.data['spec']['restartPolicy'] = policy
@@ -253,12 +260,11 @@ class KubePodYML(KubeConfigYML):
             Called by kubecluster at compile time:
             Add the configs from all the continaers
         """
-        # TODO: fix
         for container_yml in container_ymls:
             if container_yml.data['name'] in self.container_names:
                 continue
-            if container_yml.pod_yml is not None:
-                raise CompilationError('[Error] Adding a container to a pod twice')
+            if container_yml.pod_yml is not None and container_yml.pod_yml is not self:
+                raise CompilationError('[Error] Adding a container to different pods')
             for volume in container_yml.mounted_volumes:
                 self.add_volume(volume)
             self.data['spec']['containers'].append(container_yml.data)
@@ -344,15 +350,19 @@ class KubeExperiment(object):
                 if port in self.portrange:
                     self.portrange.remove(port)
                 self.reserved_ports[reserved_port_name] = port
-        for process in self.experiment.processes.values(): 
+        for process in self.experiment.processes.values():
+            if process.process_group is None:
+                pod_yml = process.cluster_configs['kubernetes']
+            else:
+                pod_yml = process.process_group.cluster_configs['kubernetes']
             for exposed_service_name in process.exposed_services:
                 if exposed_service_name in self.exposed_services:
                     continue
                 port = process.exposed_services[exposed_service_name]
                 if port is None:
                     port = self.get_port()
-                print(exposed_service_name)
                 service = KubeCloudExternelService(exposed_service_name, port)
+                pod_yml.add_label('service-' + exposed_service_name, 'expose')
                 self.exposed_services[service.name] = service
             for provided_service_name in process.provided_services:
                 if provided_service_name in self.provided_services:
@@ -361,8 +371,8 @@ class KubeExperiment(object):
                 if port is None:
                     port = self.get_port()
                 service = KubeIntraClusterService(provided_service_name, port)
+                pod_yml.add_label('service-' + provided_service_name, 'provide')
                 self.provided_services[service.name] = service
-            
 
     def get_port(self):
         if len(self.portrange) == 0:
