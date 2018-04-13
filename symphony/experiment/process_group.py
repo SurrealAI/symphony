@@ -33,3 +33,9 @@ class ProcessGroupConfig(object):
         self.experiment = experiment
         for process in self.processes.values():
             experiment.add_process(process)
+
+    @property
+    # TODO: error checking
+    def kube(self):
+        return self.cluster_configs['kubernetes']
+

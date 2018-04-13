@@ -74,3 +74,8 @@ class ProcessConfig(object):
             self.reserved_ports[arg] = None
         for k in kwargs:
             self.reserved_ports[k] = kwargs[k]
+
+    @property
+    # TODO: error checking
+    def kube(self):
+        return self.cluster_configs['kubernetes']

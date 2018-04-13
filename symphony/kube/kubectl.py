@@ -88,7 +88,7 @@ class Kubectl(object):
                       "to fix credential error")
             return out.strip(), err.strip(), retcode
 
-    def run_raw(self, cmd, program='kubectl', print_cmd=False):
+    def run_raw(self, cmd, program='kubectl', print_cmd=False): # Moved to Cluster
         """
         Raw os.system calls
 
@@ -103,7 +103,7 @@ class Kubectl(object):
                 print(cmd)
             return os.system(cmd)
 
-    def _print_err_return(self, out, err, retcode):
+    def _print_err_return(self, out, err, retcode): # Moved to Cluster
         print_err('error code:', retcode)
         print_err('*' * 20, 'stderr', '*' * 20)
         print_err(err)

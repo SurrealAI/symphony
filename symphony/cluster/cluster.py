@@ -53,6 +53,62 @@ class Cluster(object):
             copy files from the machine that contains process with process_name
         """
 
+# TODO: clean up the names maybe
+
+    def run(self, cmd, program):
+        cmd = program + ' ' + cmd
+        if self.dry_run:
+            print(cmd)
+            return '', '', 0
+        else:
+            out, err, retcode = run_process(cmd)
+            if 'could not find default credentials' in err:
+                print("Please try `gcloud container clusters get-credentials mycluster` "
+                      "to fix credential error")
+            return out.strip(), err.strip(), retcode
+
+
+    def run_raw(self, cmd, program, print_cmd=False):
+        """
+        Raw os.system calls
+
+        Returns:
+            error code
+        """
+        cmd = program + ' ' + cmd
+        if self.dry_run:
+            print(cmd)
+        else:
+            if print_cmd:
+                print(cmd)
+            return os.system(cmd)
+
+    def _print_err_return(self, out, err, retcode):
+        print_err('error code:', retcode)
+        print_err('*' * 20, 'stderr', '*' * 20)
+        print_err(err)
+        print_err('*' * 20, 'stdout', '*' * 20)
+        print_err(out)
+        print_err('*' * 46)
+
+
+    def run_verbose(self, cmd,
+                    print_out=True,
+                    raise_on_error=False,
+                    program='kubectl'):
+        out, err, retcode = self.run(cmd, program=program)
+        if retcode != 0:
+            self._print_err_return(out, err, retcode)
+            msg = 'Command `{} {}` fails'.format(program, cmd)
+            if raise_on_error:
+                raise RuntimeError(msg)
+            else:
+                print_err(msg)
+        elif out and print_out:
+            print(out)
+        return out, err, retcode
+
+
 
 if __name__ == "__main__":
     from symphony import ProcessConfig, ExperimentConfig, KubeCluster

@@ -1,13 +1,17 @@
 from symphony.experiment.process import ProcessConfig
 from symphony.experiment.process_group import ProcessGroupConfig
+from symphony.cluster.kubecluster import KubeExperiment
+from symphony.core.application_config import SymphonyConfig
 
 class ExperimentConfig(object):
     """
         This class holds all information about what process you want to run
         and how you want to run each of them.
     """
-    def __init__(self, name, cluster_configs=None):
+    def __init__(self, name, cluster_configs=None, use_global_name_prefix=True):
         self.name = name
+        if use_global_name_prefix and SymphonyConfig.experiment_name_prefix is not None:
+            self.name = SymphonyConfig.experiment_name_prefix + '-' + self.name
         self.processes = {}
         self.process_groups = {}
         self.excecution_plan = {}
@@ -41,6 +45,18 @@ class ExperimentConfig(object):
                 {}: a process group with the same name already exists'.format(process_group_name, self.name))
             self.process_groups[process_group_name] = process_group
             process_group._set_experiment(self)
+
+    def use_kube(self):
+        """
+            Initialize kubernetes related configs on one-self
+        """
+        k8sconfig = KubeExperiment(self)
+        k8sconfig.initialize_configs()
+
+    @property
+    # TODO: error checking
+    def kube(self):
+        return self.cluster_configs['kubernetes']
 
 # process_a = Process(name='learner', binds=['sampler_backend'], connects=['sampler_backend'])
 # process_b = Process(name='replay', connects=['sampler_backend'])
