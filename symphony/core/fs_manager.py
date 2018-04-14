@@ -10,10 +10,6 @@ import pickle
 class FSManager(object):
     def __init__(self):
         self.data_root = Path(SymphonyConfig.data_path)
-        print('making file')
-        print(SymphonyConfig.data_path)
-        print(self.data_root)
-        print(self.data_root.mkdir(parents=True, exist_ok=True))
 
     def experiment_path(self, experiment_name):
         experiment_path = self.data_root / experiment_name
@@ -35,6 +31,8 @@ class FSManager(object):
         if experiment_file.exists():
             with open(experiment_file, 'rb') as f:
                 experiment = pickle.load(f)
+        else:
+            raise ValueError('[Error] Cannot find experiment {}'.format(experiment_name))
         assert isinstance(experiment, ExperimentConfig)
         return experiment
 

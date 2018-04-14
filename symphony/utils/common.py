@@ -1,5 +1,8 @@
 import re
+import sys
 
+def print_err(*args, **kwargs):
+    print(*args, **kwargs, file=sys.stderr)
 
 def sanitize_name(name, verbose=True):
     """
@@ -11,6 +14,7 @@ def sanitize_name(name, verbose=True):
     sanitized_name = sanitized_name.lower()
     sanitized_name = sanitized_name.replace(' ', '-')
     sanitized_name = sanitized_name.replace('_', '-')
+    sanitized_name = sanitized_name.replace('.', '-')
     if sanitized_name != name and verbose:
         print('[Warning] Name {} is replaced by {}.'.format(name, sanitized_name))
     check_valid_dns(sanitized_name)

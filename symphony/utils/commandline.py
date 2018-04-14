@@ -1,3 +1,15 @@
+import subprocess as pc
+import os
+from symphony.utils.common import print_err
+
+
+def run_process(cmd):
+    # if isinstance(cmd, str):  # useful for shell=False
+    #     cmd = shlex.split(cmd.strip())
+    proc = pc.Popen(cmd, stdout=pc.PIPE, stderr=pc.PIPE, shell=True)
+    out, err = proc.communicate()
+    return out.decode('utf-8'), err.decode('utf-8'), proc.returncode
+
 def run(cmd, dry_run=False):
     if dry_run:
         print(cmd)
@@ -33,8 +45,8 @@ def _print_err_return(out, err, retcode):
 
 def run_verbose(cmd,
                 print_out=True,
-                raise_on_error=False):
-    out, err, retcode = run(cmd)
+                raise_on_error=False, dry_run=False):
+    out, err, retcode = run(cmd, dry_run=dry_run)
     if retcode != 0:
         _print_err_return(out, err, retcode)
         msg = 'Command `{}` fails'.format(cmd)

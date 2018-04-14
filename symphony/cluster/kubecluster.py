@@ -2,14 +2,16 @@ from symphony.cluster.cluster import Cluster
 from symphony.cluster_config.kubernetes import *
 from symphony.core.address import AddressBookData
 from symphony.core.fs_manager import FSManager
+from symphony.core.application_config import SymphonyConfig
 from symphony.utils.common import check_valid_dns
 import symphony.utils.commandline as cmdline
+from symphony.utils.ezdict import EzDict
 import yaml
 import collections
 import itertools
 from io import StringIO
 # TODO: fix this
-from symphony.utils.ezdict import EzDict
+
 
 
 class KubeCluster(Cluster):
@@ -35,7 +37,35 @@ class KubeCluster(Cluster):
             #TODO: persist yaml file
             cmdline.run_verbose('kubectl create namespace ' + experiment.name, dry_run=self.dry_run)
             cmdline.run_verbose('kubectl create -f "{}" --namespace {}'.format(launch_plan_file, experiment.name), dry_run=self.dry_run)
+    
+
+    def delete(self, experiment_name):
+        """
+        kubectl delete -f kurreal.yml --namespace <experiment_name>
+        kubectl delete namespace <experiment_name>
+
+        Notes:
+            Delete a namespace will automatically delete all resources under it.
+
+        Args:
+            namespace
+            yaml_path: if None, delete the namespace.
+        """
+        check_valid_dns(experiment_name)
+        cmdline.run_verbose(
+            'kubectl delete namespace {}'.format(experiment_name),
+            print_out=True, raise_on_error=False
+        )
+        # if yaml_path: TODO: sometime add this functionality in?
+        #     if not U.f_exists(yaml_path) and not self.dry_run:
+        #         raise FileNotFoundError(yaml_path + ' does not exist, cannot stop.')
+        #     self.run_verbose(
+        #         'delete -f "{}" --namespace {}'
+        #             .format(yaml_path, namespace),
+        #         print_out=True, raise_on_error=False
+        #     )
         
+
     def current_context(self):
         out, err, retcode = cmdline.run_verbose(
             'kubectl config current-context', print_out=False, 
@@ -43,7 +73,7 @@ class KubeCluster(Cluster):
         )
         return out
 
-    def current_namespace(self):
+    def current_experiment(self):
         """
         Parse from `kubectl config view`
         """
@@ -56,7 +86,7 @@ class KubeCluster(Cluster):
                 return context['context']['namespace']
         raise RuntimeError('INTERNAL: current context not found')
 
-    def list_namespaces(self):
+    def list_experiments(self):
         all_names = self.query_resources('namespace', output_format='name')
         # names look like namespace/<actual_name>, need to postprocess
         return [n.split('/')[-1] for n in all_names]
@@ -71,7 +101,7 @@ class KubeCluster(Cluster):
             'kubectl config set-context $(kubectl config current-context) --namespace={}'.format(namespace),
             print_out=True, raise_on_error=False, dry_run=self.dry_run
         )
-        if not dry_run and retcode == 0:
+        if not self.dry_run and retcode == 0:
             print('successfully switched to namespace `{}`'.format(namespace))
 
     def _deduplicate_with_order(self, seq):
@@ -79,11 +109,15 @@ class KubeCluster(Cluster):
         https://stackoverflow.com/questions/480214/how-do-you-remove-duplicates-from-a-list-in-whilst-preserving-order
         deduplicate list while preserving order
         """
-        return list(OrderedDict.fromkeys(seq))
+        return list(collections.OrderedDict.fromkeys(seq))
 
-    def fuzzy_match_namespace(self, name, max_matches=10):
+    def prefix_username(self, name):
+        print(name)
+        return SymphonyConfig.experiment_name_prefix + '-' + name
+
+    def fuzzy_match_experiment(self, name, max_matches=10):
         """
-        Fuzzy match namespace, precedence from high to low:
+        Fuzzy match experiment_name, precedence from high to low:
         1. exact match of <prefix + name>, if prefix option is turned on in ~/.surreal.yml
         2. exact match of <name> itself
         3. starts with <prefix + name>, sorted alphabetically
@@ -95,7 +129,7 @@ class KubeCluster(Cluster):
             - string if the matching is exact
             - OR list of fuzzy matches
         """
-        all_names = self.list_namespaces()
+        all_names = self.list_experiments()
         prefixed_name = self.prefix_username(name)
         if prefixed_name in all_names:
             return prefixed_name
@@ -108,6 +142,18 @@ class KubeCluster(Cluster):
         matches += sorted([n for n in all_names if name in n])
         matches = self._deduplicate_with_order(matches)
         return matches[:max_matches]
+
+    def _get_selectors(self, labels, fields):
+        """
+        Helper for list_resources and list_jsonpath
+        """
+        labels, fields = labels.strip(), fields.strip()
+        cmd= ' '
+        if labels:
+            cmd += '--selector ' + shlex.quote(labels)
+        if fields:
+            cmd += ' --field-selector ' + shlex.quote(fields)
+        return cmd
 
     def query_resources(self, resource,
                         output_format,
@@ -262,7 +308,7 @@ class KubeCluster(Cluster):
                 return pod_name, process_name
         raise ValueError('[Error] Cannot find processs with name: {}'.format(process_name))
 
-    def logs(self,process_name,since=0,tail=100,experiment_name=None):
+    def logs(self,process_name, since=0,tail=100,experiment_name=None):
         """
         kubectl logs <pod_name> <container_name> --follow --since= --tail=
         https://kubernetes-v1-4.github.io/docs/user-guide/kubectl/kubectl_logs/
@@ -271,8 +317,8 @@ class KubeCluster(Cluster):
             stdout string
         """
         if experiment_name is None:
-            experiment_name = self.current_namespace()
-        pod_name, container_name = get_pod_container(experiment_name, process_name)
+            experiment_name = self.current_experiment()
+        pod_name, container_name = self.get_pod_container(experiment_name, process_name)
         out, err, retcode = cmdline.run_verbose(
             self._get_logs_cmd(
                 pod_name, process_name, follow=False,
@@ -287,9 +333,32 @@ class KubeCluster(Cluster):
         else:
             return out
 
+    def logs_print(self,process_name,follow=False,
+                since=0,tail=100,experiment_name=None):
+        """
+        kubectl logs <pod_name> <container_name> --follow --since= --tail=
+        https://kubernetes-v1-4.github.io/docs/user-guide/kubectl/kubectl_logs/
+
+        prints the logs to stdout of program
+
+        Returns:
+            exit code
+        """
+        if experiment_name is None:
+            experiment_name = self.current_experiment()
+        pod_name, container_name = self.get_pod_container(experiment_name, process_name)
+        return cmdline.run_raw(
+            self._get_logs_cmd(
+                pod_name, process_name, follow=follow,
+                since=since, tail=tail, namespace=experiment_name
+            ),
+            print_cmd=False,
+            dry_run=self.dry_run
+        )
+
     def describe(self, process_name, experiment_name=None):
         if experiment_name is None:
-            experiment_name = self.current_namespace()
+            experiment_name = self.current_experiment()
         pod_name, container_name = self.get_pod_container(experiment_name, process_name)
         cmd = 'kubectl describe pod ' + pod_name + self._get_ns_cmd(experiment_name)
         return cmdline.run_verbose(cmd, print_out=True, 
@@ -301,7 +370,7 @@ class KubeCluster(Cluster):
         No error checking, no string caching, delegates to os.system
         """
         if experiment_name is None:
-            experiment_name = self.current_namespace()
+            experiment_name = self.current_experiment()
         pod_name, container_name = self.get_pod_container(experiment_name, process_name)
         cmd = self._get_logs_cmd(
             pod_name, container_name, follow=follow,
@@ -327,7 +396,7 @@ class KubeCluster(Cluster):
         if U.is_sequence(cmd):
             cmd = ' '.join(map(shlex.quote, cmd))
         if experiment_name is None:
-            experiment_name = self.current_namespace()
+            experiment_name = self.current_experiment()
         ns_cmd = self._get_ns_cmd(experiment_name)
         pod_name, container_name = self.get_pod_container(experiment_name, process_name)
         return cmdline.run_raw('kubecetl exec -ti {} -c {} {} -- {}'.format(pod_name, 
@@ -349,7 +418,7 @@ class KubeCluster(Cluster):
             else:
                 return None, path
         if experiment_name is None:
-            experiment_name = self.current_namespace()
+            experiment_name = self.current_experiment()
         src_name, src_path = _split(src_file)
         dest_name, dest_path = _split(dest_file)
         assert (src_name is None) != (dest_name is None), \
