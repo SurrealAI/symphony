@@ -8,6 +8,7 @@ import symphony.utils.commandline as cmdline
 from symphony.utils.common import print_err
 import argparse
 import sys
+import re
 
 
 def sanitize_experiment_name(name):
@@ -564,7 +565,7 @@ class Symphony:
             cmdline.run_verbose(cmd, print_out=True, raise_on_error=False)
         if args.all:
             ns_cmd = ' --all-namespaces'
-        elif args.namespace:
+        elif args.experiment_name:
             ns_cmd = ' --namespace ' + self._get_experiment(args)
         else:
             ns_cmd = ''
@@ -591,7 +592,7 @@ class Symphony:
         """
         Same as `kubectl describe pod <pod_name>`
         """
-        self.kube.describe(args.pod_name, namespace=self._get_experiment(args))
+        self.kube.describe(args.pod_name, experiment_name=self._get_experiment(args))
 
 
     def symphony_log(self, args):
