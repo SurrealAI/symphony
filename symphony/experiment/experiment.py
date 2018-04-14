@@ -1,6 +1,7 @@
 from symphony.experiment.process import ProcessConfig
 from symphony.experiment.process_group import ProcessGroupConfig
-from symphony.cluster.kubecluster import KubeExperiment
+from symphony.utils.common import sanitize_name
+from symphony.cluster_config.kubernetes import KubeExperiment
 from symphony.core.application_config import SymphonyConfig
 
 class ExperimentConfig(object):
@@ -12,6 +13,7 @@ class ExperimentConfig(object):
         self.name = name
         if use_global_name_prefix and SymphonyConfig.experiment_name_prefix is not None:
             self.name = SymphonyConfig.experiment_name_prefix + '-' + self.name
+        self.name = sanitize_name(self.name)
         self.processes = {}
         self.process_groups = {}
         self.excecution_plan = {}

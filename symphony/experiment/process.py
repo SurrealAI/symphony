@@ -1,7 +1,9 @@
+from symphony.utils.common import sanitize_name
+
+
 class ProcessConfig(object):
     def __init__(self, name, command=None, args=None, container_image=None, cluster_configs=None):
-
-        self.name = name
+        self.name = sanitize_name(name)
         self.command = command
         self.args = args
         self.container_image = container_image

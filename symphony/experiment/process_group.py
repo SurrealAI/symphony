@@ -1,8 +1,10 @@
 from symphony.experiment.process import ProcessConfig
+from symphony.utils.common import sanitize_name
+
 
 class ProcessGroupConfig(object):
     def __init__(self, name, cluster_configs=None):
-        self.name = name
+        self.name = sanitize_name(name)
         if cluster_configs is None:
             cluster_configs = {}
         self.cluster_configs = cluster_configs

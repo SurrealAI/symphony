@@ -1,3 +1,4 @@
+# TODO: use BeneDict
 """
 Adapted from: https://github.com/makinacorpus/EzDict
 This version adds new features to EzDict and fixes issues, like how to handle
