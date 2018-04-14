@@ -807,38 +807,29 @@ class Kubectl(object):
                 'exec -ti {}{} -- {}'.format(component_name, ns_cmd, cmd)
             )
 
-    def scp_surreal(self, src_file, dest_file, namespace=''):
+    def scp(self, src_file, dest_file, experiment_name=None):
         """
-        https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#cp
-        kurreal cp /my/local/file learner:/remote/file mynamespace
-        is the same as
-        kubectl cp /my/local/file mynamespace/nonagent:/remote/file -c learner
+        cp learner:/abc ./abc
         """
+        # TODO: make sense of it
+        if experiment_name is None:
+            experiment_name = self.current_namespace()
         def _split(f):
             if ':' in f:
-                pod, path = f.split(':')
-                container = None
-                if pod in self.NONAGENT_COMPONENTS:
-                    container = pod
-                    pod = 'nonagent'
+                process_name, path = f.split(':')
+                pod, container = self.get_pod_container(experiment_name, process_name)
+                return ':'.join(pod, path) + ' -c ' + container, True
             else:
-                pod, path, container = None, f, None
-            if pod and namespace:
-                pod = namespace + '/' + pod
-            if pod:
-                path = pod + ':' + path
-            return pod, path, container
-
-        src_pod, src_path, src_container = _split(src_file)
-        dest_pod, dest_path, dest_container = _split(dest_file)
-        assert bool(src_pod) != bool(dest_pod), \
-            'one of "src_file" and "dest_file" must be remote and the other local.'
-        container = src_container or dest_container  # at least one is None
-        cmd = 'cp {} {}'.format(src_path, dest_path)
-        if container:
-            cmd += ' -c ' + container
+                return f, False
+        src, src_is_remote = _split(src_file)
+        dest, dest_is_remote = _split(dest_file)
+        if (src_is_remote == dest_is_remote):
+            raise ValueError('One of "src_file" and "dest_file" must be remote and the other must be local.')
+        cmd = 'cp {} {}'.format(src, dest)
         self.run_raw(cmd, print_cmd=True)
 
+
+    # TODO: what do those gcloud things do
     def gcloud_get_config(self, config_key):
         """
         Returns: value of the gcloud config
