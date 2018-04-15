@@ -1,11 +1,12 @@
 from symphony.utils.common import CompilationError
 from symphony.core.address import AddressBookData
+from benedict import BeneDict
 import yaml
 import collections
 import itertools
 from io import StringIO
 # TODO: fix this with Benedict
-from symphony.utils.ezdict import EzDict
+
 
 def merge_dict(d, u):
     for k, v in u.items():

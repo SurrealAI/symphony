@@ -3,16 +3,16 @@ from symphony.experiment import ProcessConfig, ProcessGroupConfig, ExperimentCon
 
 c = KubeCluster()
 
-learner = ProcessConfig('learner', container_image='us.gcr.io/surreal-dev-188523/surreal-cpu:latest', args=['--cmd', 'sleep 1000'])
+learner = ProcessConfig('learner', container_image='us.gcr.io/surreal-dev-188523/surreal-cpu:latest', args=['--cmd', 'echo "abc"; sleep 1000'])
 learner.provides('parameter-server')
 learner.requests('samples')
 learner.exposes('tensorboard')
 learner.reserves(load_balancing=7002)
 
-replay = ProcessConfig('replay', container_image='us.gcr.io/surreal-dev-188523/surreal-cpu:latest', args=['--cmd', 'sleep 1000'])
+replay = ProcessConfig('replay', container_image='us.gcr.io/surreal-dev-188523/surreal-cpu:latest', args=['--cmd', 'echo "abc"; sleep 1000'])
 replay.provides('samples')
 
-agent = ProcessConfig('agent-0', container_image='us.gcr.io/surreal-dev-188523/surreal-cpu:latest', args=['--cmd', 'sleep 1000'])
+agent = ProcessConfig('agent-0', container_image='us.gcr.io/surreal-dev-188523/surreal-cpu:latest', args=['--cmd', 'echo "abc"; sleep 1000'])
 agent.requests('parameter-server')
 
 nonagent = ProcessGroupConfig('Nonagent')

@@ -32,6 +32,9 @@ setup(
         "Environment :: Console",
         "Programming Language :: Python :: 3"
     ],
+    requires=[
+        "BeneDict"
+    ],
     include_package_data=True,
     zip_safe=False
 )

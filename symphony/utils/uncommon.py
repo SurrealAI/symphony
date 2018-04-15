@@ -118,13 +118,6 @@ def mean(numbers):
     return float(sum(numbers)) / max(len(numbers), 1)
 
 
-def is_sequence(obj):
-    """
-    Returns:
-      True if the sequence is a collections.Sequence and not a string.
-    """
-    return (isinstance(obj, collections.Sequence)
-            and not isinstance(obj, str))
 
 
 def include_keys(include, d):

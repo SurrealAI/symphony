@@ -1,5 +1,6 @@
 import re
 import sys
+import collections
 
 def print_err(*args, **kwargs):
     print(*args, **kwargs, file=sys.stderr)
@@ -29,6 +30,14 @@ def check_valid_dns(name):
     if not _DNS_RE.match(name):
         raise ValueError(name + ' must be a valid DNS name with only lower-case '
             'letters, 0-9 and hyphen. No underscore or dot allowed.')
+
+def is_sequence(obj):
+    """
+    Returns:
+      True if the sequence is a collections.Sequence and not a string.
+    """
+    return (isinstance(obj, collections.Sequence)
+            and not isinstance(obj, str))
 
 
 class CompilationError(Exception):
