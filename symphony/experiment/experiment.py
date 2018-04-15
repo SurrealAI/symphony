@@ -4,6 +4,7 @@ from symphony.utils.common import sanitize_name
 from symphony.cluster_config.kubernetes import KubeExperiment
 from symphony.core.application_config import SymphonyConfig
 
+
 class ExperimentConfig(object):
     """
         This class holds all information about what process you want to run
@@ -11,8 +12,8 @@ class ExperimentConfig(object):
     """
     def __init__(self, name, cluster_configs=None, use_global_name_prefix=True):
         self.name = name
-        if use_global_name_prefix and SymphonyConfig.experiment_name_prefix is not None:
-            self.name = SymphonyConfig.experiment_name_prefix + '-' + self.name
+        if use_global_name_prefix and SymphonyConfig().experiment_name_prefix:
+            self.name = SymphonyConfig().experiment_name_prefix + '-' + self.name
         self.name = sanitize_name(self.name)
         self.processes = {}
         self.process_groups = {}

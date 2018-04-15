@@ -1,7 +1,49 @@
 import os
-
+from pathlib import Path
+from benedict import BeneDict
 
 # TODO: make this configurable
-class SymphonyConfig():
-    data_path = os.path.expanduser('~/symphony')
-    experiment_name_prefix = 'jirenz'
+
+class SymphonyConfigLoader(object):
+    def __init__(self):
+        local_config = None
+        local_config_path = Path('.symphony.yml')
+        if local_config_path.exists():
+            local_config = BeneDict.load_yaml(local_config_path)
+        global_config = None
+        if 'SYMPH_GLOBAL_CONFIG' in os.environ:
+            global_config_path = Path(os.environ['SYMPH_GLOBAL_CONFIG'])
+        else:
+            global_config_path = Path(os.path.expanduser('~/.symphony.yml'))
+        if global_config_path.exists():
+            global_config = BeneDict.load_yaml(global_config_path)
+
+        self.apply_default_configs()
+        if global_config:
+            self.apply_configs(global_config)
+        if local_config:
+            self.apply_configs(local_config)
+    
+    def apply_default_configs(self):
+        self.data_path = os.path.expanduser('~/symphony')
+        self.experiment_name_prefix = None
+
+    def apply_configs(self, config):
+        if 'data_directory' in config:
+            self.data_path = os.path.expanduser(conf.data_path)
+        if 'username' in config:
+            self.experiment_name_prefix = config.username
+
+class SymphonyConfig(object):
+    """
+        Reads the path to symphony config yml file. 
+        Order is 
+            ./.symphony.yml
+            SYMPH_GLOBAL_CONFIG
+            ~/.symphony.yml
+    """
+    __instance = None
+    def __new__(cls): # __new__ always a classmethod
+        if not SymphonyConfig.__instance:
+            SymphonyConfig.__instance = SymphonyConfigLoader()
+        return SymphonyConfig.__instance

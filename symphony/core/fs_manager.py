@@ -9,7 +9,7 @@ import pickle
 
 class FSManager(object):
     def __init__(self):
-        self.data_root = Path(SymphonyConfig.data_path)
+        self.data_root = Path(SymphonyConfig().data_path)
 
     def experiment_path(self, experiment_name):
         experiment_path = self.data_root / experiment_name

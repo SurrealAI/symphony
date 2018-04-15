@@ -114,7 +114,7 @@ class KubeCluster(Cluster):
 
     def prefix_username(self, name):
         print(name)
-        return SymphonyConfig.experiment_name_prefix + '-' + name
+        return SymphonyConfig().experiment_name_prefix + '-' + name
 
     def fuzzy_match_experiment(self, name, max_matches=10):
         """
