@@ -6,6 +6,7 @@ from symphony.utils.common import sanitize_name
 from symphony.cluster.kubecluster import KubeCluster
 import symphony.utils.commandline as cmdline
 from symphony.utils.common import print_err
+import webbrowser
 import argparse
 import sys
 import re
@@ -40,15 +41,15 @@ class SymphonyParser:
         self._setup_delete_batch()
         self._setup_log()
         self._setup_experiment()
-        # TODO: experiments
-        self._setup_process()
         
-        self._setup_exec() # TODO
-        self._setup_scp() # TODO
-        self._setup_ssh() # TODO
-
-        # self._setup_ssh_node() # TODO: lower priority
-        # TODO: read external service
+        self._setup_process()
+        # self._setup_list() handles experiment but I 
+        # treat it as advanced feature here
+        
+        self._setup_exec()
+        self._setup_scp()
+        self._setup_ssh() 
+        self._setup_visit()
 
         ### One needs to draw a line in the sand here 
         ### Above are instructions that can be universal to all cluster interfaces
@@ -57,23 +58,25 @@ class SymphonyParser:
         ### Below are: Advanced options
         ### That have to leak kubernetes related information 
         ### and requires users to have kubernetes related knowledge
+        
         self._setup_list()
         self._setup_describe()
+
+        # self._setup_configure_ssh()
+        # self._setup_ssh_node() # TODO: this is google cloud specific
 
         # These are surreal-specific functionalities. I might have a way 
         # of aggregating them
         # self._setup_create()
         # self._setup_create_dev()
         # self._setup_restore()
-        # self._setup_resume() # TODO: what about restore and resume
-
+        # self._setup_resume() 
+        # self._setup_download_experiment()
         # self._setup_tensorboard()
         # self._setup_create_tensorboard()
-
-        # self._setup_download_experiment() # TODO: what to do with this
+        # TODO: all these are project specific
 
         # self._setup_ssh_nfs() # 
-        # self._setup_configure_ssh()
         # self._setup_capture_tensorboard()
         return self._master_parser
 
@@ -108,7 +111,7 @@ class SymphonyParser:
 
     # def _setup_create_tensorboard(self): 
 
-    # def _setup_tensorboard(self): TODO: external service
+    # def _setup_tensorboard(self):
 
     # def _setup_download_experiment(self):
 
@@ -119,6 +122,8 @@ class SymphonyParser:
     # def _setup_label(self):
 
     # def _setup_capture_tensorboard(self):
+
+    # def _setup_ssh_node(self):
 
     def _setup_delete(self):
         parser = self._add_subparser('delete', aliases=['d'])
@@ -228,16 +233,20 @@ class SymphonyParser:
         )
         self._add_experiment_name(parser, required=False, positional=True)
 
-
-
     def _setup_ssh(self):
         parser = self._add_subparser('ssh', aliases=[])
         self._add_component_arg(parser)
         self._add_experiment_name(parser, required=False, positional=True)
 
-    def _setup_ssh_node(self):
-        parser = self._add_subparser('ssh-node', aliases=['sshnode'])
-        parser.add_argument('node_name', help='gcloud only')
+    def _setup_visit(self):
+        parser = self._add_subparser('visit', aliases=['vi'])
+        parser.add_argument('service_name', help='the name of the service to visit')
+        parser.add_argument(
+            '-u', '--url-only',
+            action='store_true',
+            help='only show the URL without opening the browser.'
+        )
+        self._add_experiment_name(parser, required=False, positional=True)
 
     # ==================== helpers ====================
     def _add_dry_run(self, parser):
@@ -378,7 +387,6 @@ class Symphony:
         """
         kube = self.kube
         name = args.experiment_name
-        print(args)
         if name:
             name = self._interactive_find_exp(name)
             if name is None:
@@ -489,6 +497,16 @@ class Symphony:
         """
         self.kube.ssh(args.component_name, self._get_experiment(args))
 
+    def symphony_visit(self, args):
+        print(args)
+        url = self.kube.external_ip(args.service_name, self._get_experiment(args))
+        if url:
+            url = 'http://' + url
+            print(url)
+            if not args.url_only:
+                webbrowser.open(url)
+        else:
+            print_err('Tensorboard does not yet have an external IP.')
 
     # def symphony_download_experiment(self, args):
 

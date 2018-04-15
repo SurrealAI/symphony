@@ -267,18 +267,21 @@ class KubeCluster(Cluster):
         )
         return BeneDict.loads_yaml(out)
 
-    def external_ip(self, pod_name, namespace=''):
+    def external_ip(self, service_name, experiment_name=None):
         """
         Returns:
-            "<ip>:<port>"
+            "<ip>:<port>": if service is found
+            None: otherwise
         """
-        tb = self.query_resources('svc', 'yaml',
-                                  names=[pod_name], namespace=namespace)
-        conf = tb.status.loadBalancer
+        if experiment_name is None:
+            experiment_name = self.current_experiment()
+        res = self.query_resources('svc', 'yaml',
+                                  names=[service_name], namespace=experiment_name)
+        conf = res.status.loadBalancer
         if not ('ingress' in conf and 'ip' in conf.ingress[0]):
-            return ''
+            return None
         ip = conf.ingress[0].ip
-        port = tb.spec.ports[0].port
+        port = res.spec.ports[0].port
         return '{}:{}'.format(ip, port)
 
     def _get_ns_cmd(self, namespace):
