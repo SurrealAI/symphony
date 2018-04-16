@@ -11,8 +11,6 @@ import yaml
 import collections
 import itertools
 from io import StringIO
-# TODO: fix this
-
 
 
 class KubeCluster(Cluster):

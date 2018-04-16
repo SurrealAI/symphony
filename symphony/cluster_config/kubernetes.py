@@ -346,6 +346,10 @@ class KubePodYML(KubeConfigYML):
         self.mount_volume(v, mount_path)
         return v
 
+    def set_env(self, name, value):
+        for container_yml in self.container_ymls:
+            container_yml.set_env(name, value)
+
 
 class KubeExperiment(object):
     #TODO: Minikube
