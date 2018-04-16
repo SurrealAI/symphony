@@ -28,13 +28,20 @@ setup(
     # },
     classifiers=[
         "Development Status :: 3 - Alpha",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         # "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "Environment :: Console",
         "Programming Language :: Python :: 3"
     ],
-    requires=[
+    install_requires=[
         "BeneDict"
     ],
+    entry_points={
+        'console_scripts': [
+            'symphony=symphony.symph:main',
+        ],
+    },
+    python_requires='>=3',
     include_package_data=True,
     zip_safe=False
 )

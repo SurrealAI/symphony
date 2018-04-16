@@ -161,7 +161,7 @@ class KubeCluster(Cluster):
                         names=None,
                         labels='',
                         fields='',
-                        namespace=''):
+                        namespace=None):
         """
         Query all items in the resource with `output_format`
         JSONpath: https://kubernetes.io/docs/reference/kubectl/jsonpath/
@@ -288,9 +288,7 @@ class KubeCluster(Cluster):
         if namespace:
             return ' --namespace ' + namespace
         else:
-            # We want upper level functions to handle namespace, 
-            # so catch undesired use cases here
-            raise ValueError('namespace needs to be provided')
+            return ''
 
     def _get_logs_cmd(self, pod_name, container_name,
                       follow, namespace, since=0, tail=-1):
