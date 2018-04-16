@@ -13,7 +13,8 @@ class ExperimentConfig(object):
     def __init__(self, name, cluster_configs=None, use_global_name_prefix=True):
         self.name = name
         if use_global_name_prefix and SymphonyConfig().experiment_name_prefix:
-            self.name = SymphonyConfig().experiment_name_prefix + '-' + self.name
+            if self.name.find(SymphonyConfig().experiment_name_prefix) != 0:
+                self.name = SymphonyConfig().experiment_name_prefix + '-' + self.name
         self.name = sanitize_name(self.name)
         self.processes = {}
         self.process_groups = {}

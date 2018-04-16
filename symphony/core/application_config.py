@@ -7,15 +7,15 @@ from benedict import BeneDict
 class SymphonyConfigLoader(object):
     def __init__(self):
         local_config = None
-        local_config_path = Path('.symphony.yml')
-        if local_config_path.exists():
+        local_config_path = '.symphony.yml'
+        if Path(local_config_path).exists():
             local_config = BeneDict.load_yaml(local_config_path)
         global_config = None
         if 'SYMPH_GLOBAL_CONFIG' in os.environ:
-            global_config_path = Path(os.environ['SYMPH_GLOBAL_CONFIG'])
+            global_config_path = os.environ['SYMPH_GLOBAL_CONFIG']
         else:
-            global_config_path = Path(os.path.expanduser('~/.symphony.yml'))
-        if global_config_path.exists():
+            global_config_path = os.path.expanduser('~/.symphony.yml')
+        if Path(global_config_path).exists():
             global_config = BeneDict.load_yaml(global_config_path)
 
         self.apply_default_configs()

@@ -29,7 +29,7 @@ class FSManager(object):
     def load_experiment(self, experiment_name):
         experiment_file = self.experiment_file(experiment_name)
         if experiment_file.exists():
-            with open(experiment_file, 'rb') as f:
+            with experiment_file.open('rb') as f:
                 experiment = pickle.load(f)
         else:
             raise ValueError('[Error] Cannot find experiment {}'.format(experiment_name))
@@ -40,13 +40,13 @@ class FSManager(object):
         assert isinstance(experiment, ExperimentConfig)
         experiment_name = experiment.name
         experiment_file = self.experiment_file(experiment_name)
-        with open(experiment_file, 'wb') as f:
+        with experiment_file.open('wb') as f:
             experiment = pickle.dump(experiment, f)
         return experiment_file
 
     def save_launch_plan(self, experiment_name, launch_plan, cluster_type):
         launch_plan_file = self.launch_plan_file(experiment_name, cluster_type)
-        with open(launch_plan_file, 'w') as f:
+        with launch_plan_file.open('w') as f:
             f.write(launch_plan)
         return launch_plan_file
 

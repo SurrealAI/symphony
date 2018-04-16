@@ -39,7 +39,7 @@ def strip_repository_name(git_repo_url):
     dot_git = output.rfind('.git')
     if dot_git != -1:
         output = output[:dot_git]
-    return output
+    return output.lower()
 
 
 class KubeConfigYML(object):
