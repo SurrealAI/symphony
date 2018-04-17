@@ -498,7 +498,6 @@ class Symphony:
         self.kube.ssh(args.component_name, self._get_experiment(args))
 
     def symphony_visit(self, args):
-        print(args)
         url = self.kube.external_ip(args.service_name, self._get_experiment(args))
         if url:
             url = 'http://' + url
