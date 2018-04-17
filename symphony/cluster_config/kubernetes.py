@@ -393,7 +393,7 @@ class KubeExperiment(object):
             ab_data = AddressBookData()
             for exposed_service_name in process.exposed_services:
                 exposed_service = self.exposed_services[exposed_service_name]
-                ab_data.add_provider(exposed_service.name, exposed_service_name, exposed_service.port)
+                ab_data.add_exposer(exposed_service.name, exposed_service_name, exposed_service.port)
         
             for provided_service_name in process.provided_services:
                 provided_service = self.provided_services[provided_service_name]
@@ -409,8 +409,7 @@ class KubeExperiment(object):
 
             for reserved_port_name in process.reserved_ports:
                 reserved_port = self.reserved_ports[reserved_port_name]
-                ab_data.add_requester(reserved_port_name, '127.0.0.1', reserved_port)
-                ab_data.add_provider(reserved_port_name, '127.0.0.1', reserved_port)
+                ab_data.add_reserved(reserved_port_name, reserved_port)
 
             json_string = ab_data.dumps()
             if process.process_group is None:
