@@ -69,7 +69,7 @@ class AddressAPI(object):
         """
         pass
 
-    def exposes(self, service_name):
+    def expose(self, service_name):
         """
         Returns host-port to the process exposing the service named <service_name>
         Args:
@@ -78,7 +78,7 @@ class AddressAPI(object):
         """
         pass
 
-    def reserves(self, port_name):
+    def reserve(self, port_name):
         """
         Returns port to the process reserving the port named <port_name>
         Args:
