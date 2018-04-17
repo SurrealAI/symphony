@@ -207,7 +207,7 @@ class AddressBook(AddressAPI):
             entry = entries[name]
             services[name] = AddressBookService(service_name=name, 
                 process_role=self.role, verbose=self.verbose, 
-                **entries)
+                **entry)
         return services
 
     def request(self, service_name):
