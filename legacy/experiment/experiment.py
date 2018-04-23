@@ -10,7 +10,9 @@ class ExperimentConfig(object):
         This class holds all information about what process you want to run
         and how you want to run each of them.
     """
-    def __init__(self, name, cluster_configs=None, use_global_name_prefix=True):
+    def __init__(self, name, 
+                cluster_configs=None, 
+                use_global_name_prefix=True):
         self.name = name
         if use_global_name_prefix and SymphonyConfig().experiment_name_prefix:
             if self.name.find(SymphonyConfig().experiment_name_prefix) != 0:
@@ -18,7 +20,6 @@ class ExperimentConfig(object):
         self.name = sanitize_name(self.name)
         self.processes = {}
         self.process_groups = {}
-        self.excecution_plan = {}
         if cluster_configs is None:
             cluster_configs = {}
         self.cluster_configs = cluster_configs

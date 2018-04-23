@@ -12,11 +12,10 @@ class ProcessConfig(object):
         self.cluster_configs = cluster_configs
         self.process_group = None
         self.experiment = None
-        self.provided_services = {}
-        self.requested_services = {}
+        self.binded_services = {}
+        self.connected_services = {}
         self.exposed_services = {}
         self.reserved_ports = {}
-        self.excecution_plan = {}
 
         self.compiled = False
 
@@ -40,42 +39,49 @@ class ProcessConfig(object):
                                                         process_group.name, self.process_group.name))
         self.process_group = process_group
 
+    def parse_spec(self, spec):
+        """
+            Compiles port specification, it can be (tested in this order): 
+            (str): arrange an arbitrary port for this service
+            (list(str)):arrange an arbitrary port for every string in the list
+            (dict): for 'k','v' in dict: arrange port 'v' for service 'k'
+        """
+        if isinstance(spec, str):
+            return {spec: None}
+        if isinstance(spec, list) or isinstance(spec, tuple):
+            return {x: None for x in spec}
+        if isinstance(spec, dict):
+            return spec
+
     # TODO: docs about bind/connect/connect input format
-    def provides(self, *args, **kwargs):
+    def binds(self, spec):
         if self.compiled:
             print('[Warning] Process {} edited after being \
                 compiled, there can be undefined behaviors'.format(self.name))
-        for arg in args:
-            self.provided_services[arg] = None
-        for k in kwargs:
-            self.provided_services[k] = kwargs[k]
+        self.binded_services.update(self.parse_spec(spec))
 
-    def requests(self, *args):
+    def connects(self, spec):
         if self.compiled:
             print('[Warning] Process {} edited after being \
                 compiled, there can be undefined behaviors'.format(self.name))
-        for arg in args:
-            self.requested_services[arg] = None
+        self.connected_services.update(self.parse_spec(spec))
 
-    def exposes(self, *args, **kwargs):
+    def exposes(self, spec):
         if self.compiled:
             print('[Warning] Process {} edited after being \
                 compiled, there can be undefined behaviors'.format(self.name))
-        for arg in args:
-            self.exposed_services[arg] = None
-        for k in kwargs:
-            self.exposed_services[k] = kwargs[k]
+        self.exposed_services.update(self.parse_spec(spec))
 
-    # TODO: define why reserves is necessary: Containers in a pod can have 
-    # intra-container communication, want to avoid colliding with external
-    def reserves(self, *args, **kwargs):
-        if self.compiled:
-            print('[Warning] Process {} edited after being \
-                compiled, there can be undefined behaviors'.format(self.name))
-        for arg in args:
-            self.reserved_ports[arg] = None
-        for k in kwargs:
-            self.reserved_ports[k] = kwargs[k]
+    # # TODO: define why reserves is necessary: Containers in a pod can have 
+    # # intra-container communication, want to avoid colliding with external
+    # def reserves(self, *args, **kwargs):
+    #     if self.compiled:
+    #         print('[Warning] Process {} edited after being \
+    #             compiled, there can be undefined behaviors'.format(self.name))
+    #     for arg in args:
+    #         self.reserved_ports[arg] = None
+    #     for k in kwargs:
+    #         self.reserved_ports[k] = kwargs[k]
 
     @property
     # TODO: error checking

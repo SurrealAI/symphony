@@ -9,7 +9,6 @@ class ProcessGroupConfig(object):
             cluster_configs = {}
         self.cluster_configs = cluster_configs
         self.processes = {}
-        self.excecution_plan = {}
         self.experiment = None
         self.compiled = False
 
