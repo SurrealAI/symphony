@@ -21,7 +21,7 @@ class Cluster(metaclass=_BackendRegistry):
         pass
 
     @classmethod
-    def use(cls, backend, **kwargs):
+    def new(cls, backend, **kwargs):
         """
         To write generic cluster spec code, please use this factory method
         instead of subclass constructors

@@ -42,5 +42,5 @@ exp.add_process(tb)
 for process in exp.all_processes():
     process.mount_nfs(server='surreal-shared-fs-vm', path='/data', mount_path='/fs')
 
-cluster = Cluster.use('kube')
+cluster = Cluster.new('kube')
 cluster.launch(exp)

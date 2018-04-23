@@ -5,7 +5,7 @@ Order of spec: Cluster -> Experiment -> ProcessGroup -> Process
 from symphony.engine import *
 from symphony.kube import *
 
-cluster = Cluster.use('kube')
+cluster = Cluster.new('kube')
 exp = cluster.new_experiment('exp', 'args', 'arg2')
 nonagent = exp.new_process_group('group', 'args')
 learner = nonagent.new_process('proc1', 'cmd1')

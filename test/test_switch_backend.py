@@ -7,7 +7,7 @@ from symphony.kube import *
 
 
 def create_common_spec(backend):
-    cluster = Cluster.use(backend)
+    cluster = Cluster.new(backend)
     exp = cluster.new_experiment('exp', 'args', 'arg2')
     nonagent = exp.new_process_group('group', 'args')
     learner = nonagent.new_process('proc1', 'cmd1')
