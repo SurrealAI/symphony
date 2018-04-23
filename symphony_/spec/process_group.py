@@ -13,6 +13,9 @@ class ProcessGroupSpec(BaseSpec):
         self.processes[process.name] = process
         process.parent_process_group = self
 
+    def get_process(self, name):
+        return self.processes[name]
+
     def add_processes(self, processes):
         for p in processes:
             self.add_process(p)

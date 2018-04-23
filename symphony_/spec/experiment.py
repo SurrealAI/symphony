@@ -32,31 +32,37 @@ class ExperimentSpec(BaseSpec):
     def _new_process_group(self, *args, **kwargs):
         raise NotImplementedError
 
+    def get_process_group(self, name):
+        return self.process_groups[name]
+
     def all_process_groups(self):
         return self.process_groups.values()
 
-    def add_lone_process(self, process):
+    def add_process(self, process):
         assert isinstance(process, ProcessSpec)
         self.lone_processes[process.name] = process
         process.parent_experiment = self
 
-    def add_lone_processes(self, processes):
+    def add_processes(self, processes):
         for p in processes:
-            self.add_lone_process(p)
+            self.add_process(p)
 
-    def new_lone_process(self, *args, **kwargs):
+    def new_process(self, *args, **kwargs):
         """
         Returns:
             new ProcessSpec
         """
-        p = self._new_lone_process(*args, **kwargs)
-        self.add_lone_process(p)
+        p = self._new_process(*args, **kwargs)
+        self.add_process(p)
         return p
 
-    def _new_lone_process(self, *args, **kwargs):
+    def _new_process(self, *args, **kwargs):
         raise NotImplementedError
 
-    def all_lone_processes(self):
+    def get_process(self, name):
+        return self.lone_processes[name]
+
+    def all_processes(self):
         return self.lone_processes.values()
 
     @classmethod

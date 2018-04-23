@@ -4,7 +4,7 @@ from .process_group import TmuxProcessGroupSpec
 
 
 class TmuxExperimentSpec(ExperimentSpec):
-    def _new_lone_process(self, *args, **kwargs):
+    def _new_process(self, *args, **kwargs):
         return TmuxProcessSpec(*args, **kwargs)
 
     def _new_process_group(self, *args, **kwargs):

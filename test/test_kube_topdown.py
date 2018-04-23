@@ -15,15 +15,15 @@ replay.connects('myserver')
 
 agents = []
 for i in range(8):
-    agent = exp.new_lone_process('agent' + str(i), '--cmd')
+    agent = exp.new_process('agent' + str(i), '--cmd')
     agent.connects('myserver')
     agents.append(agent)
 
-tb = exp.new_lone_process('tb', '--logdir')
+tb = exp.new_process('tb', '--logdir')
 tb.exposes('tensorboard')
 
 # do some more kube specific things
-for process in exp.all_lone_processes():
+for process in exp.all_processes():
     process.mount_nfs(server='surreal-shared-fs-vm', path='/data', mount_path='/fs')
 
 tb.resource_request(cpu=1.7)
@@ -37,4 +37,4 @@ nonagent.add_toleration(key='surreal', operator='Exists', effect='NoExecute')
 
 nonagent.image_pull_policy('Always')
 
-cluster.launch()
+cluster.launch(exp)

@@ -4,7 +4,7 @@ from .process_group import KubeProcessGroupSpec
 
 
 class KubeExperimentSpec(ExperimentSpec):
-    def _new_lone_process(self, *args, **kwargs):
+    def _new_process(self, *args, **kwargs):
         return KubeProcessSpec(*args, **kwargs)
 
     def _new_process_group(self, *args, **kwargs):

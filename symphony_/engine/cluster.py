@@ -18,7 +18,7 @@ class _BackendRegistry:
 
 class Cluster(metaclass=_BackendRegistry):
     def __init__(self, **kwargs):
-        self.experiments = {}
+        pass
 
     @classmethod
     def use(cls, backend, **kwargs):
@@ -42,22 +42,14 @@ class Cluster(metaclass=_BackendRegistry):
     # ========================================================
     # ===================== Launch API =======================
     # ========================================================
-    def add_experiment(self, experiment):
-        self.experiments[experiment.name] = experiment
-
     def new_experiment(self, *args, **kwargs):
         """
         Returns:
             new ExperimentSpec
         """
-        e = self._new_experiment(*args, **kwargs)
-        self.add_experiment(e)
-        return e
-
-    def _new_experiment(self, *args, **kwargs):
         raise NotImplementedError
 
-    def launch(self):
+    def launch(self, experiment_config):
         raise NotImplementedError
 
     # ========================================================

@@ -35,14 +35,12 @@ tb.image_pull_policy('Always')
 
 exp = KubeExperimentSpec('exp', 'args', 'arg2')
 exp.add_process_group(nonagent)
-exp.add_lone_processes(agents)
-exp.add_lone_process(tb)
+exp.add_processes(agents)
+exp.add_process(tb)
 
 # do some more kube specific things
-for process in exp.all_lone_processes():
+for process in exp.all_processes():
     process.mount_nfs(server='surreal-shared-fs-vm', path='/data', mount_path='/fs')
 
 cluster = Cluster.use('kube')
-cluster.add_experiment(exp)
-
-cluster.launch()
+cluster.launch(exp)
