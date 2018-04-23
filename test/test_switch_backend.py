@@ -2,8 +2,8 @@
 Top-down construction of the launch spec
 Order of spec: Cluster -> Experiment -> ProcessGroup -> Process
 """
-from symphony_.engine import *
-from symphony_.kube import *
+from symphony.engine import *
+from symphony.kube import *
 
 
 def create_common_spec(backend):

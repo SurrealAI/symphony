@@ -1,4 +1,4 @@
-from symphony_.engine import Cluster
+from symphony.engine import Cluster
 from .experiment import KubeExperimentSpec
 
 

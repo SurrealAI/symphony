@@ -2,8 +2,8 @@
 Top-down construction of the launch spec
 Order of spec: Cluster -> Experiment -> ProcessGroup -> Process
 """
-from symphony_.engine import *
-from symphony_.kube import *
+from symphony.engine import *
+from symphony.kube import *
 
 cluster = Cluster.use('kube')
 exp = cluster.new_experiment('exp', 'args', 'arg2')

@@ -1,4 +1,4 @@
-from symphony_.spec import ProcessSpec
+from symphony.spec import ProcessSpec
 
 
 class TmuxProcessSpec(ProcessSpec):

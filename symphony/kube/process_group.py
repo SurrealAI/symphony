@@ -1,4 +1,4 @@
-from symphony_.spec import ProcessGroupSpec
+from symphony.spec import ProcessGroupSpec
 from .process import KubeProcessSpec
 
 

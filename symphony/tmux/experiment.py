@@ -1,4 +1,4 @@
-from symphony_.spec import ExperimentSpec
+from symphony.spec import ExperimentSpec
 from .process import TmuxProcessSpec
 from .process_group import TmuxProcessGroupSpec
 

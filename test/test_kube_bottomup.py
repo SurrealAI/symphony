@@ -2,8 +2,8 @@
 Bottom-up construction of the launch spec
 Order of spec: Process -> ProcessGroup -> Experiment -> Cluster
 """
-from symphony_.engine import *
-from symphony_.kube import *
+from symphony.engine import *
+from symphony.kube import *
 
 
 learner = KubeProcessSpec('proc1', 'cmd1')
