@@ -5,7 +5,7 @@ Cluster subclasses are the actual execution engines
 _BACKEND_REGISTRY = {}
 
 
-class _BackendRegistry:
+class _BackendRegistry(type):
     def __new__(cls, name, bases, class_dict):
         cls = type.__new__(cls, name, bases, class_dict)
         cls_name = cls.__name__

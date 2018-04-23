@@ -1,11 +1,13 @@
 """
 All experiments, processes, and process_groups extend from this base class
 """
-from benedict import BeneDict
+from benedict import BeneDict # TODO: Jim, why do you have this line here?
+from symphony.utils.common import sanitize_name
 
 
 class BaseSpec:
     def __init__(self, name):
+        name = sanitize_name(name)
         self.name = name
 
     def to_dict(self):

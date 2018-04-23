@@ -1,18 +1,28 @@
 from .base import BaseSpec
 from .process import ProcessSpec
 from .process_group import ProcessGroupSpec
+from symphony.engine.application_config import SymphonyConfig
+# from symphony.utils.common import 
 
 
 class ExperimentSpec(BaseSpec):
-    def __init__(self, name):
+    def __init__(self, name, use_global_name_prefix=True):
+        if use_global_name_prefix and SymphonyConfig().experiment_name_prefix:
+            if name.find(SymphonyConfig().experiment_name_prefix) != 0:
+                name = SymphonyConfig().experiment_name_prefix + '-' + name
         super().__init__(name)
         self.lone_processes = {}
+        self.all_processes = {}
         self.process_groups = {}
-
+        
     def add_process_group(self, process_group):
         assert isinstance(process_group, ProcessGroupSpec)
-        self.process_groups[process_group.name] = process_group
-        process_group.parent_experiment = self
+        process_group_name = process_group.name
+        if process_group_name in self.process_groups:
+            raise ValueError('[Error] Cannot add process group {} to experiment \
+                {}: a process group with the same name already exists'.format(process_group_name, self.name))
+        self.process_groups[process_group_name] = process_group
+        process_group._set_experiment(self)
 
     def add_process_groups(self, process_groups):
         for pg in process_groups:
@@ -38,10 +48,16 @@ class ExperimentSpec(BaseSpec):
     def all_process_groups(self):
         return self.process_groups.values()
 
-    def add_process(self, process):
+    def add_process(self, process, lone=True):
         assert isinstance(process, ProcessSpec)
-        self.lone_processes[process.name] = process
-        process.parent_experiment = self
+        process_name = process.name
+        if process_name in self.all_processes:
+            raise ValueError('[Error] Cannot add process {} to experiment \
+            {}: a process with the same name already exists'.format(process_name, self.name))
+        if lone:
+            self.lone_processes[process_name] = process
+        self.all_processes[process_name] = process
+        process._set_experiment(self)
 
     def add_processes(self, processes):
         for p in processes:

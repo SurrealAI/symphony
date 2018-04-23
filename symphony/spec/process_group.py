@@ -12,6 +12,22 @@ class ProcessGroupSpec(BaseSpec):
         assert isinstance(process, ProcessSpec)
         self.processes[process.name] = process
         process.parent_process_group = self
+        process._set_process_group(self)
+        if self.parent_experiment is not None:
+            self.parent_experiment.add_process(process)
+
+    def _set_experiment(self, experiment):
+        """ Internal method
+            Set process to belong to experiment
+        """
+        if self.parent_experiment is not None:
+            raise ValueError('[Error] Process group {} cannot be added to experiment {}. \
+                It is already in experiment {}'.format(self.name,
+                                                        experiment.name, 
+                                                        self.parent_experiment.name))
+        self.parent_experiment = experiment
+        for process in self.processes.values():
+            experiment.add_process(process, lone=False)
 
     def get_process(self, name):
         return self.processes[name]
@@ -41,3 +57,5 @@ class ProcessGroupSpec(BaseSpec):
 
     def to_dict(self):
         raise NotImplementedError
+
+
