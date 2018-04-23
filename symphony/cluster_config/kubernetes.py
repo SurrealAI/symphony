@@ -84,7 +84,7 @@ class KubeIntraClusterService(KubeService):
             'spec': {
                 'type': 'ClusterIP',
                 'ports': [{'port': port}],
-                'selector': {'service-' + name: 'provide'},
+                'selector': {'service-' + name: 'bind'},
             },
         }
 
@@ -355,7 +355,7 @@ class KubeExperiment(object):
     #TODO: Minikube
     def __init__(self, experiment, portrange=None):
         self.pods = {}
-        self.provided_services = {}
+        self.binded_services = {}
         self.exposed_services = {}
         self.reserved_ports = {}
         self.experiment = experiment
@@ -368,9 +368,8 @@ class KubeExperiment(object):
 
         self.declare_services()
         self.assign_addresses()
-        # TODO: static port services
         
-        components = itertools.chain(self.provided_services.values(),
+        components = itertools.chain(self.binded_services.values(),
                         self.exposed_services.values(),
                         self.pods.values())
         return ''.join(['---\n' + dump_yml(x.data) for x in components])
@@ -386,7 +385,7 @@ class KubeExperiment(object):
                 self.initialize_process(process)
         
     def assign_addresses(self):
-        # print(self.provided_services)
+        # print(self.binded_services)
         # print(self.exposed_services)
         # print(self.reserved_ports)
         for process in self.experiment.processes.values():
@@ -395,17 +394,17 @@ class KubeExperiment(object):
                 exposed_service = self.exposed_services[exposed_service_name]
                 ab_data.add_exposer(exposed_service.name, exposed_service_name, exposed_service.port)
         
-            for provided_service_name in process.provided_services:
-                provided_service = self.provided_services[provided_service_name]
-                ab_data.add_provider(provided_service.name, 
-                                provided_service.name, provided_service.port)
+            for binded_service_name in process.binded_services:
+                binded_service = self.binded_services[binded_service_name]
+                ab_data.add_provider(binded_service.name, 
+                                binded_service.name, binded_service.port)
 
-            for requested_service_name in process.requested_services:
-                if not requested_service_name in self.provided_services:
-                    raise CompilationError('[Error] Process {} requests non-declared service {}'.format(process.name, requested_service_name))
-                requested_service = self.provided_services[requested_service_name]
-                ab_data.add_requester(requested_service.name, 
-                                requested_service.name, requested_service.port)
+            for connected_service_name in process.connected_services:
+                if not connected_service_name in self.binded_services:
+                    raise CompilationError('[Error] Process {} requests non-declared service {}'.format(process.name, connected_service_name))
+                connected_service = self.binded_services[connected_service_name]
+                ab_data.add_requester(connected_service.name, 
+                                connected_service.name, connected_service.port)
 
             for reserved_port_name in process.reserved_ports:
                 reserved_port = self.reserved_ports[reserved_port_name]
@@ -447,15 +446,15 @@ class KubeExperiment(object):
                 service = KubeCloudExternelService(exposed_service_name, port)
                 pod_yml.add_label('service-' + exposed_service_name, 'expose')
                 self.exposed_services[service.name] = service
-            for provided_service_name in process.provided_services:
-                if provided_service_name in self.provided_services:
+            for binded_service_name in process.binded_services:
+                if binded_service_name in self.binded_services:
                     continue
-                port = process.provided_services[provided_service_name]
+                port = process.binded_services[binded_service_name]
                 if port is None:
                     port = self.get_port()
-                service = KubeIntraClusterService(provided_service_name, port)
-                pod_yml.add_label('service-' + provided_service_name, 'provide')
-                self.provided_services[service.name] = service
+                service = KubeIntraClusterService(binded_service_name, port)
+                pod_yml.add_label('service-' + binded_service_name, 'bind')
+                self.binded_services[service.name] = service
 
     def get_port(self):
         if len(self.portrange) == 0:

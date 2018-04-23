@@ -11,21 +11,22 @@ from symphony.experiment import ProcessConfig, ProcessGroupConfig, ExperimentCon
 learner = ProcessConfig('learner', container_image='us.gcr.io/surreal-dev-188523/surreal-cpu:latest', args=['--cmd', 'echo "abc"; sleep 1000'])
 # This means we assign a host/port to this process 
 # and any process requesting parameter-sever can know how to connect to it
-learner.provides('parameter-server') 
+learner.binds('parameter-server') 
 # I can call learner.provides(parameter_server=6006) instead to provide service at a specific port 
 # TODO: fix the naming issue, cannot do "parameter-server=6006" in python
-learner.requests('samples')
+learner.connects('samples-server')
 # This means exposing the port to external 
 learner.exposes('tensorboard') 
 # I can call learner.exposes(tensorboard=6006) instead to expose a specific port 
 # This means reserving a port 
-learner.reserves(load_balancing=7002)
+learner.binds({'load_balancing': 7002})
+learner.connects('load_balancing')
 
 replay = ProcessConfig('replay', container_image='us.gcr.io/surreal-dev-188523/surreal-cpu:latest', args=['--cmd', 'echo "abc"; sleep 1000'])
-replay.provides('samples')
+replay.binds('samples-server')
 
 agent = ProcessConfig('agent-0', container_image='us.gcr.io/surreal-dev-188523/surreal-cpu:latest', args=['--cmd', 'echo "abc"; sleep 1000'])
-agent.requests('parameter-server')
+agent.connects('parameter-server')
 
 nonagent = ProcessGroupConfig('Nonagent')
 nonagent.add_process(learner, replay)
@@ -38,7 +39,7 @@ exp.add_process(agent)
 # on any backend (though maybe very inefficiently)
 
 # Below we declare a specific (the only we support right now) backend 
-c = KubeCluster()
+c = KubeCluster(dry_run=True)
 
 # Use kube-specific configs
 exp.use_kube()
