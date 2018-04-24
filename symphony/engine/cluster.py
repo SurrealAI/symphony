@@ -59,26 +59,26 @@ class Cluster(metaclass=_BackendRegistry):
     # ========================================================
     # ===================== Action API =======================
     # ========================================================
-    def delete(self, experiment):
+    def delete(self, experiment_name):
         raise NotImplementedError
 
-    def delete_batch(self, experiments):
-        for exp in experiments:
+    def delete_batch(self, experiment_names):
+        for exp in experiment_names:
             self.delete(exp)
 
-    def transfer_file(self, src, dest):
+    def transfer_file(self, experiment_name, src, dest):
         """
         scp for remote backends
         """
         raise NotImplementedError
 
-    def login(self, *args, **kwargs):
+    def login(self, experiment_name, *args, **kwargs):
         """
         ssh for remote backends
         """
         raise NotImplementedError
 
-    def exec_command(self, *args, **kwargs):
+    def exec_command(self, experiment_name, *args, **kwargs):
         raise NotImplementedError
 
     # ========================================================
@@ -91,17 +91,17 @@ class Cluster(metaclass=_BackendRegistry):
         # TODO
         pass
 
-    def list_process_groups(self, experiment):
+    def list_process_groups(self, experiment_name):
         raise NotImplementedError
 
-    def list_processes(self, experiment, process_group=None):
+    def list_processes(self, experiment_name, process_group=None):
         raise NotImplementedError
 
-    def status(self, experiment, process, process_group=None):
+    def status(self, experiment_name, process_name, process_group=None):
         raise NotImplementedError
 
-    def get_stdout(self, experiment, process, process_group=None):
+    def get_stdout(self, experiment_name, process_name, process_group=None):
         raise NotImplementedError
 
-    def get_stderr(self, experiment, process, process_group=None):
+    def get_stderr(self, experiment_name, process_name, process_group=None):
         raise NotImplementedError
