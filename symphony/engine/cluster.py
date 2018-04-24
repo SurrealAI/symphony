@@ -52,11 +52,56 @@ class Cluster(metaclass=_BackendRegistry):
     def launch(self, experiment_config):
         raise NotImplementedError
 
+    def launch_batch(self, experiment_configs):
+        for exp in experiment_configs:
+            self.launch(exp)
+
     # ========================================================
     # ===================== Action API =======================
     # ========================================================
+    def delete(self, experiment):
+        raise NotImplementedError
+
+    def delete_batch(self, experiments):
+        for exp in experiments:
+            self.delete(exp)
+
+    def transfer_file(self, src, dest):
+        """
+        scp for remote backends
+        """
+        raise NotImplementedError
+
+    def login(self, *args, **kwargs):
+        """
+        ssh for remote backends
+        """
+        raise NotImplementedError
+
+    def exec_command(self, *args, **kwargs):
+        raise NotImplementedError
 
     # ========================================================
     # ===================== Query API ========================
     # ========================================================
+    def list_experiments(self):
+        raise NotImplementedError
 
+    def fuzzy_match_experiments(self):
+        # TODO
+        pass
+
+    def list_process_groups(self, experiment):
+        raise NotImplementedError
+
+    def list_processes(self, experiment, process_group=None):
+        raise NotImplementedError
+
+    def status(self, experiment, process, process_group=None):
+        raise NotImplementedError
+
+    def get_stdout(self, experiment, process, process_group=None):
+        raise NotImplementedError
+
+    def get_stderr(self, experiment, process, process_group=None):
+        raise NotImplementedError
