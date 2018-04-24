@@ -1,6 +1,7 @@
 from symphony.engine import Cluster
 from .experiment import KubeExperimentSpec
 import symphony.utils.runner as runner
+import shlex
 
 
 class KubeCluster(Cluster):
@@ -52,41 +53,81 @@ class KubeCluster(Cluster):
         cmd = 'kubectl cp {} {}'.format(src_path, dest_path)
         runner.run_raw(cmd, print_cmd=True, dry_run=self.dry_run)
 
-    def login(self, *args, **kwargs):
+    def login(self, experiment_name, process_name):
         """
         ssh for remote backends
         """
-        raise NotImplementedError
+        self.exec(experiment_name, process_name, 'bash')
 
-    def exec_command(self, *args, **kwargs):
-        raise NotImplementedError
+    def exec_command(self, experiment_name, process_name, command):
+        """
+        kubectl exec -ti
+
+        Args: 
+        
+        Returns:
+            stdout string if is_print else None
+        """
+        if is_sequence(cmd):
+            cmd = ' '.join(map(shlex.quote, cmd))
+        ns_cmd = self._get_ns_cmd(experiment_name)
+        pod_name, container_name = self.get_pod_container(experiment_name, process_name)
+        return runner.run_raw('kubectl exec -ti {} -c {} {} -- {}'.format(pod_name, 
+                container_name, ns_cmd, cmd), dry_run=self.dry_run)
 
     # ========================================================
     # ===================== Query API ========================
     # ========================================================
+
     def list_experiments(self):
         all_names = self.query_resources('namespace', output_format='name')
         # names look like namespace/<actual_name>, need to postprocess
         return [n.split('/')[-1] for n in all_names]
 
     def fuzzy_match_experiments(self):
-        # TODO
+        # TODO, base class?
         pass
 
     def list_process_groups(self, experiment):
-        raise NotImplementedError
+        all_names = self.query_resources('pod', output_format='name')
+        return [n.split('/')[-1] for n in all_names]
 
-    def list_processes(self, experiment, process_group=None):
-        raise NotImplementedError
+    def list_processes(self, experiment, process_group):
+        all_processes = self.query_jsonpath('pod','.spec.containers[*].name', names=[process_group], namespace=experiment)[0]
+        all_processes = all_processes.strip().split(' ')
+        return all_processes
+
+    def list_topology(self, experiment):
+        process_groups = self.list_process_groups(experiment)
+        all_processes = self.query_jsonpath('pod','.spec.containers[*].name', names=process_groups, namespace=experiment)
+        t = {}
+        for i in range(len(process_groups)):
+            t[process_groups[i]] = all_processes[i].strip().split(' ')
+        return t
 
     def status(self, experiment, process, process_group=None):
         raise NotImplementedError
 
-    def get_stdout(self, experiment, process, process_group=None):
-        raise NotImplementedError
+    def get_stdout(self, experiment, process, process_group=None, since=0, tail=100):
+        pod_name, container_name = self.get_pod_container(experiment_name, process_name)
+        out, err, retcode = runner.run_verbose(
+            self._get_logs_cmd(
+                pod_name, process_name, follow=False,
+                since=since, tail=tail, namespace=experiment_name
+            ),
+            print_out=False,
+            raise_on_error=True,
+            dry_run=self.dry_run
+        )
+        if retcode != 0:
+            return ''
+        else:
+            return out
 
-    def get_stderr(self, experiment, process, process_group=None):
-        raise NotImplementedError
+    def get_stderr(self, experiment, process, process_group=None, since=0, tail=100):
+        self.get_stdout(experiment, process, process_group)
+
+    ### other
 
     def current_context(self):
         out, err, retcode = runner.run_verbose(
@@ -265,7 +306,10 @@ class KubeCluster(Cluster):
         """
         if '{' not in jsonpath:
             jsonpath = '{' + jsonpath + '}'
-        jsonpath = '{range .items[*]}' + jsonpath + '{"\\n\\n"}{end}'
+        if names is not None and len(names) == 1:
+            jsonpath = jsonpath
+        else:
+            jsonpath = '{range .items[*]}' + jsonpath + '{"\\n\\n"}{end}'
         output_format = "jsonpath=" + jsonpath
         out = self.query_resources(
             resource=resource,
@@ -326,13 +370,14 @@ class KubeCluster(Cluster):
         experiment = self.fs.load_experiment(experiment_name)
         for process in experiment.processes.values():
             if process.name == process_name:
-                if process.process_group is not None:
-                    pod_name = process.process_group.name
+                if process.parent_process_group is not None:
+                    pod_name = process.parent_process_group.name
                 else:
                     pod_name = process.name
                 return pod_name, process_name
         raise ValueError('[Error] Cannot find processs with name: {}'.format(process_name))
 
+    # TODO: moved
     def logs(self,process_name, since=0,tail=100,experiment_name=None):
         """
         kubectl logs <pod_name> <container_name> --follow --since= --tail=
