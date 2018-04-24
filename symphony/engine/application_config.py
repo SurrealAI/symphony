@@ -9,14 +9,14 @@ class SymphonyConfigLoader(object):
         local_config = None
         local_config_path = '.symphony.yml'
         if Path(local_config_path).exists():
-            local_config = BeneDict.load_yaml(local_config_path)
+            local_config = BeneDict.load_yaml_file(local_config_path)
         global_config = None
         if 'SYMPH_GLOBAL_CONFIG' in os.environ:
             global_config_path = os.environ['SYMPH_GLOBAL_CONFIG']
         else:
             global_config_path = os.path.expanduser('~/.symphony.yml')
         if Path(global_config_path).exists():
-            global_config = BeneDict.load_yaml(global_config_path)
+            global_config = BeneDict.load_yaml_file(global_config_path)
 
         self.apply_default_configs()
         if global_config:
@@ -26,13 +26,16 @@ class SymphonyConfigLoader(object):
     
     def apply_default_configs(self):
         self.data_path = os.path.expanduser('~/symphony')
-        self.experiment_name_prefix = None
+        self.username = None
+        self.prefix_username = True
 
     def apply_configs(self, config):
         if 'data_directory' in config:
             self.data_path = os.path.expanduser(conf.data_path)
         if 'username' in config:
             self.experiment_name_prefix = config.username
+        if 'prefix_username' in config:
+            self.prefix_username = bool(config.prefix_username)
 
 class SymphonyConfig(object):
     """

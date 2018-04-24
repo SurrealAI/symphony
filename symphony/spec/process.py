@@ -1,4 +1,5 @@
 from .base import BaseSpec
+from symphony.utils.common import check_valid_dns
 
 
 class ProcessSpec(BaseSpec):
@@ -40,10 +41,15 @@ class ProcessSpec(BaseSpec):
             (dict): for 'k','v' in dict: arrange port 'v' for service 'k'
         """
         if isinstance(spec, str):
+            check_valid_dns(spec)
             return {spec: None}
         if isinstance(spec, list) or isinstance(spec, tuple):
+            for x in spec:
+                check_valid_dns(x)
             return {x: None for x in spec}
         if isinstance(spec, dict):
+            for x in spec:
+                check_valid_dns(x)
             return spec
 
     # TODO: docs about bind/connect/expose input format

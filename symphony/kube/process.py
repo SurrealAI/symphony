@@ -30,6 +30,12 @@ class KubeProcessSpec(ProcessSpec):
     def dump_dict(self):
         pass
 
+    def yml(self):
+        assert self.standalone, 'Yml for process {} should be configured at process group level'.format(self.name)
+        return self.pod_yml.yml()
+
+    ### Container level 
+
     def set_command(self, command):
         self.container_yml.set_command(command)
 
@@ -38,6 +44,9 @@ class KubeProcessSpec(ProcessSpec):
 
     def set_env(self, name, value):
         self.container_yml.set_env(name, value)
+
+    def set_envs(self, di):
+        self.container_yml.set_envs(di)
 
     def mount_volume(self, volume, mount_path):
         self.container_yml.mount_volume(volume, mount_path)
@@ -57,9 +66,9 @@ class KubeProcessSpec(ProcessSpec):
     def image_pull_policy(self, policy):
         self.container_yml.image_pull_policy(policy)
 
-    # Pod level
+    ### Pod level
     def restart_policy(self, policy):
-        assert self.standalone, 'Restart policy should be configured at process group level'
+        assert self.standalone, 'Restart policy for process {} should be configured at process group level'.format(self.name)
         self.pod_yml.restart_policy(policy)
 
     def add_labels(self, **kwargs):

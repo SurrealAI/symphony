@@ -1,6 +1,8 @@
 import re
 import sys
 import collections
+from io import StringIO
+import yaml
 
 
 def merge_dict(d, u):
@@ -11,7 +13,6 @@ def merge_dict(d, u):
             d[k] = d.get(k, []) + v
         else:
             d[k] = v
-    return d
 
 def dump_yml(di):
     stream = StringIO()

@@ -6,10 +6,10 @@ from symphony.engine.application_config import SymphonyConfig
 
 
 class ExperimentSpec(BaseSpec):
-    def __init__(self, name, use_global_name_prefix=True):
-        if use_global_name_prefix and SymphonyConfig().experiment_name_prefix:
-            if name.find(SymphonyConfig().experiment_name_prefix) != 0:
-                name = SymphonyConfig().experiment_name_prefix + '-' + name
+    def __init__(self, name):
+        if SymphonyConfig().prefix_username and SymphonyConfig().username:
+            if name.find(SymphonyConfig().username) != 0:
+                name = SymphonyConfig().username + '-' + name
         super().__init__(name)
         self.lone_processes = {}
         self.all_processes = {}
@@ -78,8 +78,12 @@ class ExperimentSpec(BaseSpec):
     def get_process(self, name):
         return self.lone_processes[name]
 
+    # TODO: shall we make this list lone_processes
     def list_processes(self):
         return self.lone_processes.values()
+
+    def list_all_processes(self):
+        return self.all_processes.values()
 
     @classmethod
     def load_dict(cls):

@@ -13,7 +13,7 @@ class ProcessGroupSpec(BaseSpec):
         self.processes[process.name] = process
         process._set_process_group(self)
         if self.parent_experiment is not None:
-            self.parent_experiment.add_process(process)
+            self.parent_experiment.add_process(process, lone=False)
 
     def _set_experiment(self, experiment):
         """ Internal method

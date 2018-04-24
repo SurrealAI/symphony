@@ -1,4 +1,5 @@
 from symphony.utils.common import merge_dict
+from benedict import BeneDict
 
 
 class KubeConfigYML(object):
@@ -10,6 +11,9 @@ class KubeConfigYML(object):
             New config is a dictionary with the fields to be updated
         """
         merge_dict(self.data, new_config)
+
+    def yml(self):
+        return BeneDict(self.data).builtin_dump_yaml_str()
 
 
 class KubeService(KubeConfigYML):
@@ -130,7 +134,15 @@ class KubeContainerYML(KubeConfigYML):
         self.data['args'] = args
 
     def set_env(self, name, value):
+        for entry in self.data['env']:
+            if entry['name'] == name:
+                entry['value'] = value
+                return
         self.data['env'].append({'name': name, 'value': value})
+
+    def set_envs(self, di):
+        for k,v in di.items():
+            self.set_env(k, v)
 
     def mount_volume(self, volume, mount_path):
         assert isinstance(volume, KubeVolume)
@@ -155,17 +167,17 @@ class KubeContainerYML(KubeConfigYML):
 
     def resource_request(self, cpu=None, memory=None):
         if cpu is not None:
-            self.data = merge_dict(self.data, {'resources': {'requests': {'cpu': cpu}}})
+            merge_dict(self.data, {'resources': {'requests': {'cpu': cpu}}})
         if memory is not None:
-            self.data = merge_dict(self.data, {'resources': {'requests': {'memory': memory}}})
+            merge_dict(self.data, {'resources': {'requests': {'memory': memory}}})
 
     def resource_limit(self, cpu=None, memory=None, gpu=None):
         if cpu is not None:
-            self.data = merge_dict(self.data, {'resources': {'limits': {'cpu': cpu}}})
+            merge_dict(self.data, {'resources': {'limits': {'cpu': cpu}}})
         if memory is not None:
-            self.data = merge_dict(self.data, {'resources': {'limits': {'memory': memory}}})
+            merge_dict(self.data, {'resources': {'limits': {'memory': memory}}})
         if gpu is not None: 
-            self.data = merge_dict(self.data, {'resources': {'limits': {'nvidia.com/gpu': gpu}}})
+            merge_dict(self.data, {'resources': {'limits': {'nvidia.com/gpu': gpu}}})
 
     def image_pull_policy(self, policy):
         assert policy in ['Always', 'Never', 'IfNotPresent']

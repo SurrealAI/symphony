@@ -6,7 +6,7 @@ from .common import KubePodYML
 class KubeProcessGroupSpec(ProcessGroupSpec):
     def __init__(self, name):
         super().__init__(name)
-        self.pod_yml = KubePodYML(self)
+        self.pod_yml = KubePodYML(self.name)
 
     def _new_process(self, *args, **kwargs):
         kwargs['standalone'] = False
@@ -19,7 +19,10 @@ class KubeProcessGroupSpec(ProcessGroupSpec):
     def dump_dict(self):
         pass
 
-    # Pod level 
+    def yml(self):
+        return self.pod_yml.yml()
+
+    ### Pod level 
 
     def add_labels(self, **kwargs):
         self.pod_yml.add_labels(**kwargs)
@@ -36,7 +39,7 @@ class KubeProcessGroupSpec(ProcessGroupSpec):
     def node_selector(self, key, value):
         self.pod_yml.node_selector(key, value)
 
-    # Batch methods
+    ### Batch methods
     def mount_volume(self, volume, path):
         self.pod_yml.mount_volume(volume, path)
 
@@ -61,4 +64,8 @@ class KubeProcessGroupSpec(ProcessGroupSpec):
     def set_env(self, name, value):
         for process in self.list_processes():
             process.set_env(name, value)
+
+    def set_envs(self, di):
+        for process in self.list_processes():
+            process.set_envs(di)
 
