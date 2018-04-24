@@ -1,8 +1,8 @@
 """
 All experiments, processes, and process_groups extend from this base class
 """
-from benedict import BeneDict # TODO: Jim, why do you have this line here?
 from symphony.utils.common import sanitize_name
+import benedict.data_format as df
 
 
 class BaseSpec:
@@ -17,38 +17,55 @@ class BaseSpec:
     def load_dict(cls):
         raise NotImplementedError
 
-    def to_json_str(self):
-        # TODO taken care of in BeneDict
-        pass
+    # ---------------- derived JSON/YAML methods -----------------
+    @classmethod
+    def load_json_file(cls, file_path, **loader_kwargs):
+        return cls(df.load_json_file(file_path, **loader_kwargs))
 
     @classmethod
-    def from_json_str(cls, string):
-        # TODO taken care of in BeneDict
-        pass
-
-    def to_json_file(self, file_path):
-        # TODO taken care of in BeneDict
-        pass
+    def load_json_str(cls, string, **loader_kwargs):
+        return cls(df.load_json_str(string, **loader_kwargs))
 
     @classmethod
-    def from_json_file(cls, file_path):
-        # TODO taken care of in BeneDict
-        pass
-
-    def to_yaml_str(self):
-        # TODO taken care of in BeneDict
-        pass
+    def load_yaml_file(cls, file_path, **loader_kwargs):
+        return cls(df.load_yaml_file(file_path, **loader_kwargs))
 
     @classmethod
-    def from_yaml_str(cls, string):
-        # TODO taken care of in BeneDict
-        pass
-
-    def to_yaml_file(self, file_path):
-        # TODO taken care of in BeneDict
-        pass
+    def load_yaml_str(cls, string, **loader_kwargs):
+        return cls(df.load_yaml_str(string, **loader_kwargs))
 
     @classmethod
-    def from_yaml_file(cls, file_path):
-        # TODO taken care of in BeneDict
-        pass
+    def load_file(cls, file_path, **loader_kwargs):
+        """
+        Args:
+            file_path: JSON or YAML loader depends on the file extension
+
+        Raises:
+            IOError: if extension is not ".json", ".yml", or ".yaml"
+        """
+        return cls(df.load_file(file_path, **loader_kwargs))
+
+    def dump_json_file(self, file_path, **dumper_kwargs):
+        df.dump_json_file(self.dump_dict(), file_path, **dumper_kwargs)
+
+    def dump_json_str(self, **dumper_kwargs):
+        "Returns: string"
+        return df.dump_json_str(self.dump_dict(), **dumper_kwargs)
+
+    def dump_yaml_file(self, file_path, **dumper_kwargs):
+        df.dump_yaml_file(self.dump_dict(), file_path, **dumper_kwargs)
+
+    def dump_yaml_str(self, **dumper_kwargs):
+        "Returns: string"
+        return df.dump_yaml_str(self.dump_dict(), **dumper_kwargs)
+
+    def dump_file(self, file_path, **dumper_kwargs):
+        """
+        Args:
+            file_path: JSON or YAML loader depends on the file extension
+
+        Raises:
+            IOError: if extension is not ".json", ".yml", or ".yaml"
+        """
+        df.dump_file(self.dump_dict(), file_path, **dumper_kwargs)
+
