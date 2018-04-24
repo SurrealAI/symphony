@@ -78,7 +78,10 @@ class Cluster(metaclass=_BackendRegistry):
         """
         raise NotImplementedError
 
-    def exec_command(self, experiment_name, *args, **kwargs):
+    def exec_command(self, experiment_name, command, *args, **kwargs):
+        """
+        command(array(string))
+        """
         raise NotImplementedError
 
     # ========================================================
