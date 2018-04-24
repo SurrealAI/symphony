@@ -45,7 +45,7 @@ class ExperimentSpec(BaseSpec):
     def get_process_group(self, name):
         return self.process_groups[name]
 
-    def all_process_groups(self):
+    def list_process_groups(self):
         return self.process_groups.values()
 
     def add_process(self, process, lone=True):
@@ -78,7 +78,7 @@ class ExperimentSpec(BaseSpec):
     def get_process(self, name):
         return self.lone_processes[name]
 
-    def all_processes(self):
+    def list_processes(self):
         return self.lone_processes.values()
 
     @classmethod
