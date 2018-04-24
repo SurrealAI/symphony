@@ -1,6 +1,6 @@
 from symphony.engine import Cluster
 from .experiment import KubeExperimentSpec
-import symphony.utils.commandline as cmdline
+import symphony.utils.runner as runner
 
 
 class KubeCluster(Cluster):
@@ -22,8 +22,8 @@ class KubeCluster(Cluster):
             self.fs.save_experiment(experiment)
             launch_plan_file = self.fs.save_launch_plan(experiment.name, launch_plan, 'kubernetes')
             #TODO: persist yaml file
-            cmdline.run_verbose('kubectl create namespace ' + experiment.name, dry_run=self.dry_run)
-            cmdline.run_verbose('kubectl create -f "{}" --namespace {}'.format(launch_plan_file, experiment.name), dry_run=self.dry_run)
+            runner.run_verbose('kubectl create namespace ' + experiment.name, dry_run=self.dry_run)
+            runner.run_verbose('kubectl create -f "{}" --namespace {}'.format(launch_plan_file, experiment.name), dry_run=self.dry_run)
 
     # ========================================================
     # ===================== Action API =======================
@@ -31,7 +31,7 @@ class KubeCluster(Cluster):
 
     def delete(self, experiment_name):
         check_valid_dns(experiment_name)
-        cmdline.run_verbose(
+        runner.run_verbose(
             'kubectl delete namespace {}'.format(experiment_name),
             print_out=True, raise_on_error=False
         )
@@ -50,7 +50,7 @@ class KubeCluster(Cluster):
         assert (src_name is None) != (dest_name is None), \
             '[Error] one of "src_file" and "dest_file" must be remote and the other local.'
         cmd = 'kubectl cp {} {}'.format(src_path, dest_path)
-        cmdline.run_raw(cmd, print_cmd=True, dry_run=self.dry_run)
+        runner.run_raw(cmd, print_cmd=True, dry_run=self.dry_run)
 
     def login(self, *args, **kwargs):
         """
@@ -89,7 +89,7 @@ class KubeCluster(Cluster):
         raise NotImplementedError
 
     def current_context(self):
-        out, err, retcode = cmdline.run_verbose(
+        out, err, retcode = runner.run_verbose(
             'kubectl config current-context', print_out=False, 
             raise_on_error=True, dry_run=self.dry_run
         )
@@ -119,7 +119,7 @@ class KubeCluster(Cluster):
         After this call, all subsequent `kubectl` will default to the namespace
         """
         check_valid_dns(namespace)
-        _, _, retcode = cmdline.run_verbose(
+        _, _, retcode = runner.run_verbose(
             'kubectl config set-context $(kubectl config current-context) --namespace={}'.format(namespace),
             print_out=True, raise_on_error=False, dry_run=self.dry_run
         )
@@ -231,7 +231,7 @@ class KubeCluster(Cluster):
             prefix, arg = output_format.split('=', 1)
             output_format = prefix + '=' + shlex.quote(arg)
         cmd += ' -o ' + output_format
-        out, _, _ = cmdline.run_verbose(cmd, print_out=False, raise_on_error=True, dry_run=self.dry_run)
+        out, _, _ = runner.run_verbose(cmd, print_out=False, raise_on_error=True, dry_run=self.dry_run)
         if output_format == 'yaml':
             return BeneDict.loads_yaml(out)
         elif output_format == 'json':
@@ -282,7 +282,7 @@ class KubeCluster(Cluster):
         kubectl config view
         Generates a yaml of context and cluster info
         """
-        out, err, retcode = cmdline.run_verbose(
+        out, err, retcode = runner.run_verbose(
             'kubectl config view', print_out=False, 
             raise_on_error=True, dry_run=self.dry_run
         )
@@ -344,7 +344,7 @@ class KubeCluster(Cluster):
         if experiment_name is None:
             experiment_name = self.current_experiment()
         pod_name, container_name = self.get_pod_container(experiment_name, process_name)
-        out, err, retcode = cmdline.run_verbose(
+        out, err, retcode = runner.run_verbose(
             self._get_logs_cmd(
                 pod_name, process_name, follow=False,
                 since=since, tail=tail, namespace=experiment_name
@@ -372,7 +372,7 @@ class KubeCluster(Cluster):
         if experiment_name is None:
             experiment_name = self.current_experiment()
         pod_name, container_name = self.get_pod_container(experiment_name, process_name)
-        return cmdline.run_raw(
+        return runner.run_raw(
             self._get_logs_cmd(
                 pod_name, process_name, follow=follow,
                 since=since, tail=tail, namespace=experiment_name
@@ -386,7 +386,7 @@ class KubeCluster(Cluster):
             experiment_name = self.current_experiment()
         pod_name, container_name = self.get_pod_container(experiment_name, process_name)
         cmd = 'kubectl describe pod ' + pod_name + self._get_ns_cmd(experiment_name)
-        return cmdline.run_verbose(cmd, print_out=True, 
+        return runner.run_verbose(cmd, print_out=True, 
                     raise_on_error=False, dry_run=self.dry_run)
 
     def print_logs(self, process_name,follow=False,since=0,tail=100,experiment_name=None):
@@ -401,7 +401,7 @@ class KubeCluster(Cluster):
             pod_name, container_name, follow=follow,
             since=since, tail=tail, namespace=namespace,dry_run=self.dry_run
         )
-        cmdline.run_raw(cmd, dry_run=self.dry_run)
+        runner.run_raw(cmd, dry_run=self.dry_run)
 
     def exec(self, process_name, cmd, experiment_name=None):
         """
@@ -420,7 +420,7 @@ class KubeCluster(Cluster):
             experiment_name = self.current_experiment()
         ns_cmd = self._get_ns_cmd(experiment_name)
         pod_name, container_name = self.get_pod_container(experiment_name, process_name)
-        return cmdline.run_raw('kubectl exec -ti {} -c {} {} -- {}'.format(pod_name, 
+        return runner.run_raw('kubectl exec -ti {} -c {} {} -- {}'.format(pod_name, 
                 container_name, ns_cmd, cmd), dry_run=self.dry_run)
 
     def ssh(self, process_name, experiment_name=None):
@@ -459,4 +459,4 @@ class KubeCluster(Cluster):
         assert (src_name is None) != (dest_name is None), \
             '[Error] one of "src_file" and "dest_file" must be remote and the other local.'
         cmd = 'kubectl cp {} {}'.format(src_path, dest_path)
-        cmdline.run_raw(cmd, print_cmd=True, dry_run=self.dry_run)
+        runner.run_raw(cmd, print_cmd=True, dry_run=self.dry_run)
