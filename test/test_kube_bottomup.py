@@ -39,7 +39,7 @@ exp.add_processes(agents)
 exp.add_process(tb)
 
 # do some more kube specific things
-for process in exp.all_processes():
+for process in exp.list_processes():
     process.mount_nfs(server='surreal-shared-fs-vm', path='/data', mount_path='/fs')
 
 cluster = Cluster.new('kube')

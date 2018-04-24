@@ -23,7 +23,7 @@ tb = exp.new_process('tb', '--logdir')
 tb.exposes('tensorboard')
 
 # do some more kube specific things
-for process in exp.all_processes():
+for process in exp.list_processes():
     process.mount_nfs(server='surreal-shared-fs-vm', path='/data', mount_path='/fs')
 
 tb.resource_request(cpu=1.7)

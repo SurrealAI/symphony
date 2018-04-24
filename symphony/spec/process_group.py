@@ -32,7 +32,7 @@ class ProcessGroupSpec(BaseSpec):
     def _new_process(self, *args, **kwargs):
         raise NotImplementedError
 
-    def all_processes(self):
+    def list_processes(self):
         return self.processes.values()
 
     @classmethod

@@ -34,7 +34,7 @@ def create_tmux_cluster():
 def create_kube_cluster():
     cluster, exp = create_common_spec('kube')
     # add kube specific things
-    for process in exp.all_processes():
+    for process in exp.list_processes():
         process.mount_nfs(server='surreal-shared-fs-vm', path='/data', mount_path='/fs')
 
     tb = exp.get_process('tb')
