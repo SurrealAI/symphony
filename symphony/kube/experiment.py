@@ -5,14 +5,15 @@ from .process_group import KubeProcessGroupSpec
 
 class KubeExperimentSpec(ExperimentSpec):
     def _new_process(self, *args, **kwargs):
+        kwargs['standalone'] = True
         return KubeProcessSpec(*args, **kwargs)
 
     def _new_process_group(self, *args, **kwargs):
         return KubeProcessGroupSpec(*args, **kwargs)
 
     @classmethod
-    def from_dict(cls):
+    def load_dict(cls):
         pass
 
-    def to_dict(self):
+    def dump_dict(self):
         pass

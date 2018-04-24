@@ -2,6 +2,40 @@ import re
 import sys
 import collections
 
+
+def merge_dict(d, u):
+    for k, v in u.items():
+        if isinstance(v, collections.Mapping):
+            d[k] = merge_dict(d.get(k, {}), v)
+        elif isinstance(v, list):
+            d[k] = d.get(k, []) + v
+        else:
+            d[k] = v
+    return d
+
+def dump_yml(di):
+    stream = StringIO()
+    yaml.dump(
+        di,
+        stream,
+        default_flow_style=False,
+        indent=2
+    )
+    return stream.getvalue()
+
+def strip_repository_name(git_repo_url):
+    """
+        Strips the input and returns the text between rightmost '/' and '.git'
+    """
+    output = git_repo_url
+    last_slash = output.rfind('/')
+    if last_slash != -1:
+        output = output[last_slash + 1:]
+    dot_git = output.rfind('.git')
+    if dot_git != -1:
+        output = output[:dot_git]
+    return output.lower()
+
 def print_err(*args, **kwargs):
     print(*args, **kwargs, file=sys.stderr)
 
@@ -38,9 +72,3 @@ def is_sequence(obj):
     """
     return (isinstance(obj, collections.Sequence)
             and not isinstance(obj, str))
-
-
-class CompilationError(Exception):
-    pass
-
-

@@ -65,7 +65,7 @@ class YamlList(object):
         with open(path.expanduser(fpath), 'w') as fp:
             # must convert back to normal dict; yaml serializes EzDict object
             yaml.dump_all(
-                [d._builtin_to_dict() for d in self.data_list],
+                [d._builtin_dump_dict() for d in self.data_list],
                 fp,
                 default_flow_style=False,
             )
@@ -73,7 +73,7 @@ class YamlList(object):
     def to_string(self):
         stream = StringIO()
         yaml.dump_all(
-            [d._builtin_to_dict() for d in self.data_list],
+            [d._builtin_dump_dict() for d in self.data_list],
             stream,
             default_flow_style=False,
             indent=2

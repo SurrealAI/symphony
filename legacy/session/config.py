@@ -148,7 +148,7 @@ def _fill_default_config(config, default_config, dict_trace):
 
 
 _RESERVED_METHODS = ['keys', 'items', 'values', 'get', 'copy', 'update',
-                     'extend', 'load_file', 'dump_file', 'to_dict']
+                     'extend', 'load_file', 'dump_file', 'dump_dict']
 
 
 class Config(dict):
@@ -198,17 +198,17 @@ class Config(dict):
             else:
                 return cls(yaml.load(fp))
 
-    def to_dict(self):
+    def dump_dict(self):
         """
         Recursively convert back to dictionary
         """
         d = {}
         for k, value in self.items():
             if isinstance(value, Config):
-                d[k] = value.to_dict()
+                d[k] = value.dump_dict()
             elif isinstance(value, (list, tuple)):
                 d[k] = type(value)(
-                    v.to_dict() if isinstance(v, Config) else v for v in value)
+                    v.dump_dict() if isinstance(v, Config) else v for v in value)
             else:
                 d[k] = value
         return d
@@ -220,7 +220,7 @@ class Config(dict):
                 json.dump(self, fp, indent=4)
             else:
                 yaml.dump(
-                    self.to_dict(),
+                    self.dump_dict(),
                     stream=fp,
                     indent=4,
                     default_flow_style=False
@@ -231,7 +231,7 @@ class Config(dict):
         return _fill_default_config(self, default_config, [])
 
     def copy(self):
-        return Config(self.to_dict())
+        return Config(self.dump_dict())
 
 
 def extend_config(config, default_config):

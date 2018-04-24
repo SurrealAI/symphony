@@ -7,8 +7,8 @@ class TmuxProcessGroupSpec(ProcessGroupSpec):
         return TmuxProcessSpec(*args, **kwargs)
 
     @classmethod
-    def from_dict(cls):
+    def load_dict(cls):
         pass
 
-    def to_dict(self):
+    def dump_dict(self):
         pass

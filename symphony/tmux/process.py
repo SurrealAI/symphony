@@ -3,8 +3,8 @@ from symphony.spec import ProcessSpec
 
 class TmuxProcessSpec(ProcessSpec):
     @classmethod
-    def from_dict(cls):
+    def load_dict(cls):
         pass
 
-    def to_dict(self):
+    def dump_dict(self):
         pass

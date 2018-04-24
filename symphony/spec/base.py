@@ -10,11 +10,11 @@ class BaseSpec:
         name = sanitize_name(name)
         self.name = name
 
-    def to_dict(self):
+    def dump_dict(self):
         raise NotImplementedError
 
     @classmethod
-    def from_dict(cls):
+    def load_dict(cls):
         raise NotImplementedError
 
     def to_json_str(self):

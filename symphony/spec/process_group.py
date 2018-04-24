@@ -11,7 +11,6 @@ class ProcessGroupSpec(BaseSpec):
     def add_process(self, process):
         assert isinstance(process, ProcessSpec)
         self.processes[process.name] = process
-        process.parent_process_group = self
         process._set_process_group(self)
         if self.parent_experiment is not None:
             self.parent_experiment.add_process(process)
@@ -52,10 +51,11 @@ class ProcessGroupSpec(BaseSpec):
         return self.processes.values()
 
     @classmethod
-    def from_dict(cls):
+    def load_dict(cls):
         raise NotImplementedError
 
-    def to_dict(self):
+    def dump_dict(self):
         raise NotImplementedError
 
+    
 

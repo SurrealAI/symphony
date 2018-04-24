@@ -6,6 +6,9 @@ class ProcessSpec(BaseSpec):
         super().__init__(name)
         self.parent_process_group = None
         self.parent_experiment = None
+        self.binded_services = {}
+        self.connected_services = {}
+        self.exposed_services = {}
 
     def _set_experiment(self, experiment):
         """ Internal method
@@ -23,8 +26,8 @@ class ProcessSpec(BaseSpec):
             Set process to belong to process_group
         """
         if self.parent_process_group is not None:
-            raise ValueError('[Error] Process {} cannot be added to process_group {}. \
-                It is already in process_group {}'.format(self.name,
+            raise ValueError('[Error] Process {} cannot be added to process_group {}. ' \
+                'It is already in process_group {}'.format(self.name,
                                                         process_group.name,
                                                         self.parent_process_group.name))
         self.parent_process_group = process_group
@@ -43,7 +46,7 @@ class ProcessSpec(BaseSpec):
         if isinstance(spec, dict):
             return spec
 
-    # TODO: docs about bind/connect/connect input format
+    # TODO: docs about bind/connect/expose input format
     def binds(self, spec):
         self.binded_services.update(self.parse_spec(spec))
 
@@ -54,8 +57,8 @@ class ProcessSpec(BaseSpec):
         self.exposed_services.update(self.parse_spec(spec))
 
     @classmethod
-    def from_dict(cls):
+    def load_dict(cls):
         raise NotImplementedError
 
-    def to_dict(self):
+    def dump_dict(self):
         raise NotImplementedError

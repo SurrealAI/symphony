@@ -82,8 +82,8 @@ class ExperimentSpec(BaseSpec):
         return self.lone_processes.values()
 
     @classmethod
-    def from_dict(cls):
+    def load_dict(cls):
         raise NotImplementedError
 
-    def to_dict(self):
+    def dump_dict(self):
         raise NotImplementedError
