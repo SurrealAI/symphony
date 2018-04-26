@@ -41,7 +41,7 @@ setup(
             'symphony=symphony.symph:main',
         ],
     },
-    python_requires='>=3',
+    python_requires='>=3.5',
     include_package_data=True,
     zip_safe=False
 )

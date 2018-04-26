@@ -88,19 +88,51 @@ class Cluster(metaclass=_BackendRegistry):
     # ===================== Query API ========================
     # ========================================================
     def list_experiments(self):
+        """
+        Returns:
+            list of experiment names
+        """
         raise NotImplementedError
 
     def fuzzy_match_experiments(self):
         # TODO
         pass
 
-    def list_process_groups(self, experiment_name):
+    def describe_experiment(self, experiment_name):
+        """
+        Returns:
+        {
+            'pgroup1': {
+                'p1': {'status': 'live', 'timestamp': '11:23'},
+                'p2': {'status': 'dead'}
+            },
+            None: {  # always have all the processes
+                'p3_lone': {'status': 'running'}
+            }
+        }
+        """
         raise NotImplementedError
 
-    def list_processes(self, experiment_name, process_group=None):
+    def describe_process_group(self,
+                               experiment_name,
+                               process_group_name):
+        """
+        Returns:
+        {
+            'p1': {'status': 'live', 'timestamp': '11:23'},
+            'p2': {'status': 'dead'}
+        }
+        """
         raise NotImplementedError
 
-    def status(self, experiment_name, process_name, process_group=None):
+    def describe_process(self,
+                         experiment_name,
+                         process_name,
+                         process_group_name=None):
+        """
+        Returns:
+            {'status: 'live', 'timestamp': '23:34'}
+        """
         raise NotImplementedError
 
     def get_stdout(self, experiment_name, process_name, process_group=None):
