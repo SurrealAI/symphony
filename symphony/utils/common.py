@@ -8,7 +8,7 @@ import yaml
 def merge_dict(d, u):
     for k, v in u.items():
         if isinstance(v, collections.Mapping):
-            d[k] = merge_dict(d.get(k, {}), v)
+            d[k] = merge_dict(d.get(k, type(v)()), v)
         elif isinstance(v, list):
             d[k] = d.get(k, []) + v
         else:

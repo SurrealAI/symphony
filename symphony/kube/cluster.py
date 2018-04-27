@@ -37,20 +37,17 @@ class KubeCluster(Cluster):
             print_out=True, raise_on_error=False
         )
 
-#    def delete_batch(self, experiments):
+    # def delete_batch(self, experiments):
 
     def transfer_file(self, experiment_name, src, dest):
         """
         scp for remote backends
         """
-        if experiment_name is None:
-            experiment_name = self.current_experiment()
-
         src_name, src_path = self._format_scp_path(src_file, experiment_name)
         dest_name, dest_path = self._format_scp_path(dest_file, experiment_name)
         assert (src_name is None) != (dest_name is None), \
             '[Error] one of "src_file" and "dest_file" must be remote and the other local.'
-        cmd = 'kubectl cp {} {}'.format(src_path, dest_path)
+        cmd = 'kubectl cp {} {} {}'.format(src_path, dest_path, self._get_ns_cmd(experiment_name))
         runner.run_raw(cmd, print_cmd=True, dry_run=self.dry_run)
 
     def login(self, experiment_name, process_name):
@@ -88,18 +85,25 @@ class KubeCluster(Cluster):
         # TODO, base class?
         pass
 
+    def experiment_status(self, experiment_name):
+        if 
+
     def list_process_groups(self, experiment):
-        all_names = self.query_resources('pod', output_format='name')
+        all_names = self.query_resources('pod', output_format='name', namespace=experiment)
         return [n.split('/')[-1] for n in all_names]
 
     def list_processes(self, experiment, process_group):
-        all_processes = self.query_jsonpath('pod','.spec.containers[*].name', names=[process_group], namespace=experiment)[0]
+        all_processes = self.query_jsonpath('pod','.spec.containers[*].name',
+                                            names=[process_group],
+                                            namespace=experiment)[0]
         all_processes = all_processes.strip().split(' ')
         return all_processes
 
     def list_topology(self, experiment):
         process_groups = self.list_process_groups(experiment)
-        all_processes = self.query_jsonpath('pod','.spec.containers[*].name', names=process_groups, namespace=experiment)
+        all_processes = self.query_jsonpath('pod','.spec.containers[*].name', 
+                                            names=process_groups, 
+                                            namespace=experiment)
         t = {}
         for i in range(len(process_groups)):
             t[process_groups[i]] = all_processes[i].strip().split(' ')

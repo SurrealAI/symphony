@@ -50,6 +50,10 @@ class Cluster(metaclass=_BackendRegistry):
         raise NotImplementedError
 
     def launch(self, experiment_config):
+        """
+        Launches an experiment specified by eperiment_config.
+        Raises error if an experiment with the same name already exists
+        """
         raise NotImplementedError
 
     def launch_batch(self, experiment_configs):
@@ -60,6 +64,10 @@ class Cluster(metaclass=_BackendRegistry):
     # ===================== Action API =======================
     # ========================================================
     def delete(self, experiment_name):
+        """
+        Deletes experiment with name @experiment_name. If the experiment doesn't
+        exist, raise error
+        """
         raise NotImplementedError
 
     def delete_batch(self, experiment_names):
@@ -88,6 +96,9 @@ class Cluster(metaclass=_BackendRegistry):
     # ===================== Query API ========================
     # ========================================================
     def list_experiments(self):
+        """
+        Returns a list of experiment names
+        """
         raise NotImplementedError
 
     def fuzzy_match_experiments(self):
@@ -95,9 +106,17 @@ class Cluster(metaclass=_BackendRegistry):
         pass
 
     def list_process_groups(self, experiment_name):
+        """
+        Returns a list of process group names. If the experiment doesn't
+        exist, raise error.
+        """
         raise NotImplementedError
 
-    def list_processes(self, experiment_name, process_group=None):
+    def list_processes(self, experiment, process_group=None):
+        """
+        List all processes under @experiment @process_group
+        if process_group:
+        """
         raise NotImplementedError
 
     def status(self, experiment_name, process_name, process_group=None):
