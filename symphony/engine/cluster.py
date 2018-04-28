@@ -1,6 +1,8 @@
 """
 Cluster subclasses are the actual execution engines
 """
+from collections import OrderedDict
+
 
 _BACKEND_REGISTRY = {}
 
@@ -95,16 +97,13 @@ class Cluster(metaclass=_BackendRegistry):
     # ========================================================
     # ===================== Query API ========================
     # ========================================================
+
     def list_experiments(self):
         """
         Returns:
             list of experiment names
         """
         raise NotImplementedError
-
-    def fuzzy_match_experiments(self):
-        # TODO
-        pass
 
     def describe_experiment(self, experiment_name):
         """
@@ -148,3 +147,54 @@ class Cluster(metaclass=_BackendRegistry):
 
     def get_stderr(self, experiment_name, process_name, process_group=None):
         raise NotImplementedError
+
+    def external_service(self, experiment_name, service_name):
+        """
+        returns an ip/dns address that can be used to visit a declared service
+        Args:
+            experiment_name: The experiment concerned
+            service_name: the name of the service queried
+        """
+        raise NotImplementedError
+
+    # ========================================================
+    # ================= Helper functions =====================
+    # ========================================================
+
+    def fuzzy_match_experiment(self, name):
+        """
+        Fuzzy match experiment_name, precedence from high to low:
+        1. exact match of <prefix + name>, if prefix option is turned on in ~/.surreal.yml
+        2. exact match of <name> itself
+        3. starts with <prefix + name>, sorted alphabetically
+        4. starts with <name>, sorted alphabetically
+        5. contains <name>, sorted alphabetically
+
+        Returns:
+            - string if the matching is exact
+            - OR list of fuzzy matches
+        """
+        all_names = self.list_experiments()
+        prefixed_name = self.prefix_username(name)
+        if prefixed_name in all_names:
+            return prefixed_name
+        if name in all_names:
+            return name
+        # fuzzy matching
+        matches = []
+        matches += sorted([n for n in all_names if n.startswith(prefixed_name)])
+        matches += sorted([n for n in all_names if n.startswith(name)])
+        matches += sorted([n for n in all_names if name in n])
+        matches = self._deduplicate_with_order(matches)
+        return matches
+
+    def prefix_username(self, name):
+        return SymphonyConfig().experiment_name_prefix + '-' + name
+
+    def _deduplicate_with_order(self, seq):
+        """
+        https://stackoverflow.com/questions/480214/how-do-you-remove-duplicates-from-a-list-in-whilst-preserving-order
+        deduplicate list while preserving order
+        """
+        return list(OrderedDict.fromkeys(seq))
+
