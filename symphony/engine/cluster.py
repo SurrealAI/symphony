@@ -2,6 +2,7 @@
 Cluster subclasses are the actual execution engines
 """
 from collections import OrderedDict
+from symphony.engine.application_config import SymphonyConfig
 
 
 _BACKEND_REGISTRY = {}
@@ -105,6 +106,15 @@ class Cluster(metaclass=_BackendRegistry):
         """
         raise NotImplementedError
 
+    def status_headers(self):
+        """
+        Returns:
+            list of status fields for each process
+        e.g.
+            'status', 'timestamp'
+        """
+        raise NotImplementedError
+
     def describe_experiment(self, experiment_name):
         """
         Returns:
@@ -142,10 +152,21 @@ class Cluster(metaclass=_BackendRegistry):
         """
         raise NotImplementedError
 
-    def get_stdout(self, experiment_name, process_name, process_group=None):
+    def get_stdout(self, experiment_name, process_name, process_group=None,
+                    follow=False, since=0, tail=100, print_logs=False):
+        """
+        Returns stdout of the process <process_name> under experiment <experiment_name>
+        Args:
+            process_group(string): None if process is stand alone
+            follow(bool): set to True to wait for new logs
+            since(int): the line to start getting logs from 
+            tail(int): only get the last * lines of logs
+            print_logs(bool): True to print logs to stdout
+        """
         raise NotImplementedError
 
-    def get_stderr(self, experiment_name, process_name, process_group=None):
+    def get_stderr(self, experiment_name, process_name, process_group=None,
+                    follow=False, since=0, tail=100, print_logs=False):
         raise NotImplementedError
 
     def external_service(self, experiment_name, service_name):
@@ -156,6 +177,21 @@ class Cluster(metaclass=_BackendRegistry):
             service_name: the name of the service queried
         """
         raise NotImplementedError
+
+    def find_process(self, experiment_name, process_name):
+        """
+        Finds a process with name <process_name> in experiment <experiment_name>
+        Returns:
+            [process_group] for all process_groups that contain a process with the given name
+        """
+        found = []
+        exp = self.describe_experiment(experiment_name)
+        for process_group_name, process_group in exp.items():
+            for process in process_group:
+                if process == process_name:
+                    found.append(process_group_name)
+        return found
+
 
     # ========================================================
     # ================= Helper functions =====================

@@ -1,10 +1,14 @@
 from symphony.engine import Cluster
-from .experiment import KubeExperimentSpec
+from symphony.utils.common import check_valid_dns, is_sequence
 import symphony.utils.runner as runner
+from .experiment import KubeExperimentSpec
 from benedict.data_format import load_yaml_str, load_json_str
 from benedict import BeneDict
 from datetime import datetime
 import shlex
+
+
+_RESERVED_NS = ['default', 'kube-public', 'kube-system']
 
 
 class KubeCluster(Cluster):
@@ -34,6 +38,8 @@ class KubeCluster(Cluster):
     # ========================================================    
 
     def delete(self, experiment_name):
+        assert experiment_name not in _RESERVED_NS, \
+            'cannot delete reserved names: default, kube-public, kube-system'
         check_valid_dns(experiment_name)
         runner.run_verbose(
             'kubectl delete namespace {}'.format(experiment_name),
@@ -42,34 +48,30 @@ class KubeCluster(Cluster):
 
     # def delete_batch(self, experiments):
 
-    def transfer_file(self, experiment_name, src, dest):
+    def transfer_file(self, experiment_name, src_path, dest_path, src_process=None, src_process_group=None, 
+                    dest_process=None, dest_process_group=None):
         """
         scp for remote backends:
         """
-        src_name, src_path = self._format_scp_path(src_file, experiment_name)
-        dest_name, dest_path = self._format_scp_path(dest_file, experiment_name)
-        assert (src_name is None) != (dest_name is None), \
-            '[Error] one of "src_file" and "dest_file" must be remote and the other local.'
-        cmd = 'kubectl cp {} {} {}'.format(src_path, dest_path, self._get_ns_cmd(experiment_name))
+        src_filepath = self._format_scp_path(src_process, src_process_group, src_path)
+        dest_filepath = self._format_scp_path(dest_process, dest_process_group, dest_path)
+        cmd = 'kubectl cp {} {} {}'.format(src_filepath, dest_filepath, 
+                                            self._get_ns_cmd(experiment_name))
         runner.run_raw(cmd, print_cmd=True, dry_run=self.dry_run)
 
-    def _format_scp_path(self, f, experiment_name):
-        if ':' in f:
-            path_name, path = f.split(':')
-            if path_name.find('/'):
-                assert len(path_name.split('/')) == 2, 'Invalid process name {}'.format(path_name)
-                pod, container = path_name.split('/')
-            else:
-                pod, container = path_name
-            return process_name, '{}:{} -c {}'.format(pod, path, container)
+    def _format_scp_path(self, pg, p, path):
+        if p is None:
+            return path
         else:
-            return None, f
+            if pg is None:
+                pg = p
+            return '{}:{} -c {}'.format(pg, path, p)
 
     def login(self, experiment_name, process_name, process_group_name=None):
         """
         ssh for remote backends
         """
-        self.exec(experiment_name, process_name, 'bash', process_group_name)
+        self.exec_command(experiment_name, process_name, 'bash', process_group_name)
 
     def exec_command(self, experiment_name, process_name, command, process_group_name=None):
         """
@@ -80,15 +82,15 @@ class KubeCluster(Cluster):
         Returns:
             stdout string if is_print else None
         """
-        if is_sequence(cmd):
-            cmd = ' '.join(map(shlex.quote, cmd))
+        if is_sequence(command):
+            command = ' '.join(map(shlex.quote, command))
         ns_cmd = self._get_ns_cmd(experiment_name)
         if process_group_name is None:
             pod_name, container_name = process_name, process_name
         else:
-            pod_name, container_name = process_name, process_group_name
+            pod_name, container_name = process_group_name, process_name
         return runner.run_raw('kubectl exec -ti {} -c {} {} -- {}'.format(pod_name, 
-                container_name, ns_cmd, cmd), dry_run=self.dry_run)
+                container_name, ns_cmd, command), dry_run=self.dry_run)
 
     # ========================================================
     # ===================== Query API ========================
@@ -101,7 +103,18 @@ class KubeCluster(Cluster):
         """
         all_names = self.query_resources('namespace', output_format='name')
         # names look like namespace/<actual_name>, need to postprocess
-        return [n.split('/')[-1] for n in all_names]
+        all_namespaces = [n.split('/')[-1] for n in all_names]
+        filtered_namespaces = [x for x in all_namespaces if x not in _RESERVED_NS]
+        return filtered_namespaces
+
+    def status_headers(self):
+        """
+        Returns:
+            list of status fields for each process
+        e.g.
+            'status', 'timestamp'
+        """
+        return ['Ready', 'Restarts', 'Status']
 
     def describe_experiment(self, experiment_name):
         """
@@ -139,9 +152,9 @@ class KubeCluster(Cluster):
             state = list(container_status.state.keys())[0]
             state_info = container_status.state[state]
             out[container_name] = BeneDict({
-                'ready': container_status.ready,
-                'restartCount': container_status.restartCount,
-                'state_info': self._parse_container_state_info(state, state_info)
+                'Ready': str(int(container_status.ready)),
+                'Restarts': str(int(container_status.restartCount)),
+                'State': self._parse_container_state_info(state, state_info)
             })
         return out
 
@@ -156,11 +169,16 @@ class KubeCluster(Cluster):
                                             state_info.reason)
 
     def _get_age(self, start_time_str, finish_time_str=None):
+        """
+        Args:
+            start_time_str: ISO time string '%Y-%m-%dT%H:%M:%SZ' for start time
+            finish_time_str: ISO time string or UTC now 
+        """
         start_time = datetime.strptime(start_time_str, '%Y-%m-%dT%H:%M:%SZ')
         if finish_time_str:
             finish_time = datetime.strptime(finish_time_str, '%Y-%m-%dT%H:%M:%SZ')
         else:
-            finish_time = datetime.now()
+            finish_time = datetime.utcnow()
         return self._format_time_delta(finish_time - start_time)
 
     def _format_time_delta(self, delta):
@@ -175,10 +193,9 @@ class KubeCluster(Cluster):
             if seconds < 60:
                 return '{}s'.format(seconds)
             elif seconds < 3600:
-                return '{}min'.format(minutes)
+                return '{}m'.format(minutes)
             else:
-                return '{.1f}h'.format(hrs)
-
+                return '{:.1f}h'.format(hrs)
 
     def describe_process_group(self,
                                experiment_name,
@@ -212,29 +229,33 @@ class KubeCluster(Cluster):
             pg = self.describe_process_group(experiment_name, process_name)
             return pg[process_name]
 
-    def get_stdout(self, experiment, process, process_group=None, since=0, tail=100):
+    def get_stdout(self, experiment_name, process_name, process_group=None,
+                    follow=False, since=0, tail=100, print_logs=False):
         if process_group is None:
-            pod_name, container_name = process, process
+            pod_name, container_name = process_name, process_name
         else:
-            pod_name, container_name = process, process_group
+            pod_name, container_name = process_group, process_name
         out, err, retcode = runner.run_verbose(
             self._get_logs_cmd(
-                pod_name, process_name, follow=False,
+                pod_name, process_name, follow=follow,
                 since=since, tail=tail, namespace=experiment_name
             ),
-            print_out=False,
+            print_out=print_logs,
             raise_on_error=True,
             dry_run=self.dry_run
         )
         if retcode != 0:
             return ''
+        elif print_logs:
+            print(out)
         else:
             return out
 
-    def get_stderr(self, experiment, process, process_group=None, since=0, tail=100):
-        self.get_stdout(experiment, process, process_group)
+    def get_stderr(self, experiment_name, process_name, follow=False,
+                    process_group=None, since=0, tail=100, print_logs=False):
+        self.get_stdout(experiment, process_name, process_group, since, tail, print_logs)
 
-    def external_service(self, experiment_name, service_name):
+    def external_url(self, experiment_name, service_name):
         res = BeneDict(self.query_resources('svc', 'yaml',
                                   names=[service_name], namespace=experiment_name))
         conf = res.status.loadBalancer
@@ -403,7 +424,7 @@ class KubeCluster(Cluster):
             'kubectl config view', print_out=False, 
             raise_on_error=True, dry_run=self.dry_run
         )
-        return BeneDict.loads_yaml(out)
+        return BeneDict(load_yaml_str(out))
 
     def _get_ns_cmd(self, namespace):
         if namespace:
