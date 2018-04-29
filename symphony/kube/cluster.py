@@ -3,6 +3,7 @@ from .experiment import KubeExperimentSpec
 import symphony.utils.runner as runner
 from benedict.data_format import load_yaml_str, load_json_str
 from benedict import BeneDict
+from datetime import datetime
 import shlex
 
 
@@ -121,8 +122,7 @@ class KubeCluster(Cluster):
         for pod in all_processes.items:
             pod_name = pod.metadata.name
             container_statuses = self._parse_container_statuses(
-                                    pod.status.containerStatuses,
-                                    pod.status.startTime)
+                                    pod.status.containerStatuses)
             # test if the process is stand-alone
             if len(container_statuses) == 1 and list(container_statuses.keys())[0] == pod_name:
                 if not None in out:
@@ -132,21 +132,53 @@ class KubeCluster(Cluster):
                 out[pod_name] = container_statuses
         return out
 
-    def _parse_container_statuses(self, li, pod_start_time):
+    def _parse_container_statuses(self, li):
         out = {}
         for container_status in li:
             container_name = container_status.name
-            assert(len(container_status.state.keys()) == 1)
             state = list(container_status.state.keys())[0]
             state_info = container_status.state[state]
             out[container_name] = BeneDict({
-                'state': state,
                 'ready': container_status.ready,
                 'restartCount': container_status.restartCount,
-                'start_time': pod_start_time,
-                'state_info': state_info
+                'state_info': self._parse_container_state_info(state, state_info)
             })
         return out
+
+    def _parse_container_state_info(self, state, state_info):
+        if state == 'waiting':
+            return 'waiting: {}'.format(state_info.reason)
+        elif state == 'running':
+            return 'running: {}'.format(self._get_age(state_info.startedAt))
+        elif state == 'completed':
+            return 'completed ({}) after {}: {}'.format(state_info.exitCode,
+                    self._get_age(state_info.startedAt,state_info.finishedAt),
+                                            state_info.reason)
+
+    def _get_age(self, start_time_str, finish_time_str=None):
+        start_time = datetime.strptime(start_time_str, '%Y-%m-%dT%H:%M:%SZ')
+        if finish_time_str:
+            finish_time = datetime.strptime(finish_time_str, '%Y-%m-%dT%H:%M:%SZ')
+        else:
+            finish_time = datetime.now()
+        return self._format_time_delta(finish_time - start_time)
+
+    def _format_time_delta(self, delta):
+        seconds = abs(delta.seconds)
+        days = abs(delta.days)
+        if days:
+            hrs = seconds // 3600
+            return '{}d{}h'.format(days,hrs)
+        else:
+            minutes = seconds // 60
+            hrs = seconds / 3600
+            if seconds < 60:
+                return '{}s'.format(seconds)
+            elif seconds < 3600:
+                return '{}min'.format(minutes)
+            else:
+                return '{.1f}h'.format(hrs)
+
 
     def describe_process_group(self,
                                experiment_name,
@@ -163,8 +195,7 @@ class KubeCluster(Cluster):
         if not res:
             raise ValueError('Cannot find process_group {} in experiment {}'.format(process_group_name, experiment_name))
         pod = BeneDict(res)
-        return self._parse_container_statuses(pod.status.containerStatuses,
-                                              pod.status.startTime)
+        return self._parse_container_statuses(pod.status.containerStatuses)
 
     def describe_process(self,
                          experiment_name,
