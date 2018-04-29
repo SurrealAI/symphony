@@ -1,5 +1,5 @@
 from symphony.spec import ProcessSpec
-from .common import KubeContainerYML, KubePodYML
+from .builder import KubeContainerYML, KubePodYML
 
 
 class KubeProcessSpec(ProcessSpec):

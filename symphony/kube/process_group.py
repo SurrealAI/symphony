@@ -1,6 +1,6 @@
 from symphony.spec import ProcessGroupSpec
 from .process import KubeProcessSpec
-from .common import KubePodYML
+from .builder import KubePodYML
 
 
 class KubeProcessGroupSpec(ProcessGroupSpec):

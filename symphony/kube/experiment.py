@@ -1,7 +1,7 @@
 from symphony.spec import ExperimentSpec
 from .process import KubeProcessSpec
 from .process_group import KubeProcessGroupSpec
-from .common import KubeIntraClusterService, KubeCloudExternelService
+from .builder import KubeIntraClusterService, KubeCloudExternelService
 from symphony.utils.common import dump_yml
 from symphony.engine.address_book import AddressBookData
 import itertools
