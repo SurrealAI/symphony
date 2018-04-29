@@ -31,7 +31,7 @@ class TestTmuxCluster(unittest.TestCase):
         # Create specs.
         cluster = Cluster.new('tmux')
         exp = cluster.new_experiment('exp')
-        group = exp.new_process_group('group')
+        group = exp.new_process_group('some_group')
         echo_proc = group.new_process('echo_proc', 'echo Hello World!')
         lone_proc = exp.new_process('lone_proc', 'echo I am alone')
     
@@ -42,6 +42,17 @@ class TestTmuxCluster(unittest.TestCase):
         self.assertEqual(len(self.server.sessions), 1)
         sess = self.server.sessions[0]
         self.assertEqual(sess.name, 'exp')
+
+        # One window for each of: default window, process group, and lone_proc
+        self.assertEqual(len(sess.windows), 3)
+        default_window = sess.windows[0]
+        group_window = sess.windows[1]
+        lone_window = sess.windows[2]
+
+        # Check window properties.
+        self.assertEqual(default_window.name, tmux.cluster._DEFAULT_WINDOW)
+        self.assertEqual(group_window.name, 'some-group')
+        # self.assertEqual(lone_window.name, 'group')
 
 
 if __name__ == '__main__':

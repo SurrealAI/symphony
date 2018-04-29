@@ -7,6 +7,7 @@ from symphony.errors import *
 
 _SERVER_NAME = '__symphony__'
 _DEFAULT_WINDOW = '__main__'
+_LONE_PREFIX = '__lone__'
 
 
 class TmuxCluster(Cluster):
@@ -30,6 +31,9 @@ class TmuxCluster(Cluster):
     def _session(self, name):
         return self._tmux.find_where({'session_name': name})
 
+    def _validate_spec(self, experiment_spec):
+      pass
+
     # ===================== Launch API =======================
     def new_experiment(self, *args, **kwargs):
         return TmuxExperimentSpec(*args, **kwargs)
@@ -42,10 +46,33 @@ class TmuxCluster(Cluster):
             for p in pg.list_processes():
                 print('  ---->', p.name)
         print('\n===================\n')
+
+        # Create a new session for the given Experiment.
         if self._tmux.has_session(spec.name):
             raise ResourceExistsError(
                     'Experiment "{}" already exists'.format(spec.name))
-        self._tmux.new_session(spec.name)
+        sess = self._tmux.new_session(spec.name)
+        # Change the name of the default window.
+        sess.windows[0].rename_window(_DEFAULT_WINDOW)
+
+        # Create a window for each process group and lone process.
+        for pg in spec.list_process_groups():
+            window = sess.new_window(window_name=pg.name)
+            print('Created ProcessGroup', pg.name)
+            for idx, p in enumerate(pg.list_processes()):
+                import ipdb; ipdb.set_trace()
+                if idx == 0:
+                    # Reuse the default pane for the first process
+                    assert len(window.panes) == 0
+                    # window.panes[0].
+
+                # window.new_pane()
+                print('Created %s/%s' % (pg.name, p.name))
+
+        for p in spec.list_lone_processes():
+            sess.new_window(window_name=_LONE_PREFIX + p.name)
+            print('Created lone process', p.name)
+          
 
     def launch_batch(self, experiment_specs):
         for exp in experiment_specs:
