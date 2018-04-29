@@ -1,41 +1,63 @@
 import os
 from pathlib import Path
+from benedict.data_format import load_yaml_file, dump_yaml_file
 from benedict import BeneDict
 
-# TODO: make this configurable
 
 class SymphonyConfigLoader(object):
     def __init__(self):
-        local_config = None
-        local_config_path = '.symphony.yml'
-        if Path(local_config_path).exists():
-            local_config = BeneDict.load_yaml_file(local_config_path)
-        global_config = None
+        config = None
         if 'SYMPH_GLOBAL_CONFIG' in os.environ:
-            global_config_path = os.environ['SYMPH_GLOBAL_CONFIG']
+            config_path = os.environ['SYMPH_GLOBAL_CONFIG']
         else:
-            global_config_path = os.path.expanduser('~/.symphony.yml')
-        if Path(global_config_path).exists():
-            global_config = BeneDict.load_yaml_file(global_config_path)
+            config_path = os.path.expanduser('~/.symphony.yml')
+        self.config_path = config_path
 
-        self.apply_default_configs()
-        if global_config:
-            self.apply_configs(global_config)
-        if local_config:
-            self.apply_configs(local_config)
-    
-    def apply_default_configs(self):
-        self.data_path = os.path.expanduser('~/symphony')
-        self.username = None
-        self.prefix_username = True
+        if Path(config_path).exists():
+            config = BeneDict(load_yaml_file(config_path))
+        else:
+            print('-------------------------------------')
+            print('No symphony config file found')
+            print('Generating default at {}'.format(config_path))
+            print('Use SYMPH_GLOBAL_CONFIG to specify another config to use')
+            print('-------------------------------------')
+            dump_yaml_file(self.default_config(), config_path)
+            config = BeneDict(load_yaml_file(config_path))
 
-    def apply_configs(self, config):
-        if 'data_directory' in config:
-            self.data_path = os.path.expanduser(conf.data_path)
-        if 'username' in config:
-            self.experiment_name_prefix = config.username
-        if 'prefix_username' in config:
-            self.prefix_username = bool(config.prefix_username)
+        if 'SYMPH_CURRENT_CLUSTER' in os.environ:
+            current_cluster = os.environ['SYMPH_CURRENT_CLUSTER']
+        else:
+            current_cluster = config.default_cluster
+
+        if not current_cluster in config.clusters:
+            raise ValueError('Currently activated cluster {} undefined. Please check your config file'.format(current_cluster))
+
+        self.all_config = config
+        self.config = config.clusters[current_cluster]
+        self.load(self.config)
+
+    def default_config(self):
+        return {
+            'default_cluster': 'default',
+            'clusters': {
+                'default': {
+                    'type': 'kube',
+                    'args': {
+                        'dry_run': False,
+                    },
+                    'data_path': '~/symphony_default',
+                    'username': None,
+                    'prefix_username': True,
+                }
+            }
+        }
+
+    def load(self, config):
+        self.cluster_type = config.type
+        self.cluster_args = config.args
+        self.data_path = config.data_path
+        self.username = config.username
+        self.prefix_username = config.prefix_username
 
 class SymphonyConfig(object):
     """

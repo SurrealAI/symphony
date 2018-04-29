@@ -1,5 +1,6 @@
 from symphony.utils.common import merge_dict
 from benedict import BeneDict
+import copy
 
 
 class KubeConfigYML(object):
@@ -13,7 +14,7 @@ class KubeConfigYML(object):
         merge_dict(self.data, new_config)
 
     def yml(self):
-        return self.data.builtin_dump_yaml_str()
+        return self.data.dump_yaml_str()
 
 
 class KubeService(KubeConfigYML):
@@ -81,7 +82,16 @@ class KubeVolume(object):
         """
         raise NotImplementedError
         # return {'name': self.name}
+    
+    @classmethod
+    def load(cls, di):
+        if di['type'] == 'KubeNFSVolume':
+            return KubeNFSVolume.load(di)
+        elif di['type'] == 'KubeGitVolume':
+            return KubeGitVolume.load(di)
 
+    def save(self):
+        raise NotImplementedError
 
 class KubeNFSVolume(KubeVolume):
     def __init__(self, name, server, path):
@@ -98,6 +108,16 @@ class KubeNFSVolume(KubeVolume):
                 'path': self.path
             }
         })
+
+    @classmethod
+    def load(cls, di):
+        return cls(di['name'], di['server'], di['path'])
+
+    def save(self):
+        return {'name': self.name,
+                'server': self.server, 
+                'path': self.path,
+                'type': 'KubeNFSVolume'}
 
 
 class KubeGitVolume(KubeVolume):
@@ -116,6 +136,16 @@ class KubeGitVolume(KubeVolume):
             }
         })
 
+    @classmethod
+    def load(cls, di):
+        return cls(di['name'], di['repository'], di['revision'])
+
+    def save(self):
+        return {'name': self.name,
+                'repository': self.repository, 
+                'revision': self.revision,
+                'type': 'KubeGitVolume'}
+
 # TODO: set command / set args
 class KubeContainerYML(KubeConfigYML):
     def __init__(self, name, image):
@@ -126,6 +156,19 @@ class KubeContainerYML(KubeConfigYML):
                     })
         self.mounted_volumes = []
         self.pod_yml = None
+
+    @classmethod
+    def load(cls, di):
+        instance = cls('', '')
+        instance.data = BeneDict(di['data'])
+        instance.mount_volumes = [KubeVolume.load(x) for x in di['mounted_volumes']]
+        return instance
+
+    def save(self):
+        di = {}
+        di['data'] = self.data
+        di['mounted_volumes'] = [x.save() for x in self.mounted_volumes]
+        return di
 
     def set_command(self, command):
         self.data.command = command
@@ -201,6 +244,17 @@ class KubePodYML(KubeConfigYML):
         })
         self.container_ymls = []
         self.container_names = set()
+
+    @classmethod
+    def load(cls, di):
+        instance = cls('')
+        instance.data = di['data']
+        return instance
+
+    def save(self):
+        data = copy.deepcopy(self.data)
+        data.spec.containers = []
+        return {'data': data}
 
     def from_process(process):
         pod_yml = KubePodYML(name=process.name)

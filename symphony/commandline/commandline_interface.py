@@ -218,7 +218,8 @@ class SymphonyParser(object):
 
 class SymphonyInterface(object):
     def __init__(self, args):
-        self.cluster = Cluster.new('kube', dry_run=args.dry_run)
+        config = SymphonyConfig()
+        self.cluster = Cluster.new(config.cluster_type, **config.cluster_args)
 
     def _interactive_find_exp(self, name, max_matches=10):
         """

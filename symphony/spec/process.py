@@ -50,7 +50,7 @@ class ProcessSpec(BaseSpec):
         if isinstance(spec, dict):
             for x in spec:
                 check_valid_dns(x)
-            return spec
+            return {spec}
 
     # TODO: docs about bind/connect/expose input format
     def binds(self, spec):
@@ -63,8 +63,25 @@ class ProcessSpec(BaseSpec):
         self.exposed_services.update(self.parse_spec(spec))
 
     @classmethod
-    def load_dict(cls):
-        raise NotImplementedError
+    def load_dict(cls, di):
+        """
+        For creating new instances
+        """
+        instance = cls(di['name'])
+        instance._load_dict(di)
+        return instance
+
+    def _load_dict(self, di):
+        """
+        Loads information from di, can be inherited
+        """
+        self.binded_services = di['binded_services']
+        self.connected_services = di['connected_services']
+        self.exposed_services = di['exposed_services']
 
     def dump_dict(self):
-        raise NotImplementedError
+        di = {'name': self.name}
+        di['binded_services'] = self.binded_services
+        di['connected_services'] = self.connected_services
+        di['exposed_services'] = self.exposed_services
+        return di

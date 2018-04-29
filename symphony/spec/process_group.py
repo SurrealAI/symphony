@@ -47,15 +47,29 @@ class ProcessGroupSpec(BaseSpec):
     def _new_process(self, *args, **kwargs):
         raise NotImplementedError
 
+    @classmethod
+    def _process_class(self):
+        raise NotImplementedError
+
     def list_processes(self):
         return self.processes.values()
 
     @classmethod
-    def load_dict(cls):
-        raise NotImplementedError
+    def load_dict(cls, di):
+        instance = cls(di['name'])
+        instance._load_dict(di)
+        return instance
+
+    def _load_dict(self, di):
+        ps = di['processes']
+        for dictionary in ps:
+            self.add_process(self._process_class().load_dict(dictionary))
 
     def dump_dict(self):
-        raise NotImplementedError
+        ps = []
+        for process in self.list_processes():
+            ps.append(process.dump_dict())
+        return {'processes': ps, 'name': self.name}
 
     
 

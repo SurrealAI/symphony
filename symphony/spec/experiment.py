@@ -42,6 +42,13 @@ class ExperimentSpec(BaseSpec):
     def _new_process_group(self, *args, **kwargs):
         raise NotImplementedError
 
+    @classmethod
+    def _process_group_class(cls):
+        """
+        Returns ProcessGroupSpec
+        """
+        raise NotImplementedError
+
     def get_process_group(self, name):
         return self.process_groups[name]
 
@@ -75,6 +82,13 @@ class ExperimentSpec(BaseSpec):
     def _new_process(self, *args, **kwargs):
         raise NotImplementedError
 
+    @classmethod
+    def _process_class(cls):
+        """
+        Returns ProcessSpec
+        """
+        raise NotImplementedError
+
     def get_process(self, name):
         return self.lone_processes[name]
 
@@ -86,8 +100,25 @@ class ExperimentSpec(BaseSpec):
         return self.all_processes.values()
 
     @classmethod
-    def load_dict(cls):
-        raise NotImplementedError
+    def load_dict(cls, di):
+        name = di['name']
+        instance = cls(name)
+        instance._load_dict(di)
+        return instance
+
+    def _load_dict(self, di):
+        pgs = di['process_groups']
+        for dictionary in pgs:
+            self.add_process_group(self._process_group_class().load_dict(dictionary))
+        ps = di['processes']
+        for dictionary in ps:
+            self.add_process(self._process_class().load_dict(dictionary))
 
     def dump_dict(self):
-        raise NotImplementedError
+        pgs = []
+        for process_group in self.list_process_groups():
+            pgs.append(process_group.dump_dict())
+        ps = []
+        for process in self.list_processes():
+            ps.append(process.dump_dict())
+        return {'process_groups': pgs, 'processes': ps, 'name': self.name}

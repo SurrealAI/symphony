@@ -1,6 +1,7 @@
 from symphony.spec import ProcessGroupSpec
 from .process import KubeProcessSpec
 from .builder import KubePodYML
+from benedict.data_format import load_yaml_str
 
 
 class KubeProcessGroupSpec(ProcessGroupSpec):
@@ -12,12 +13,17 @@ class KubeProcessGroupSpec(ProcessGroupSpec):
         kwargs['standalone'] = False
         return KubeProcessSpec(*args, **kwargs)
 
-    @classmethod
-    def load_dict(cls):
-        pass
+    def _process_class(cls):
+        return KubeProcessSpec
+
+    def _load_dict(self, di):
+        self.pod_yml = KubePodYML.load(di['pod_yml'])
+        super()._load_dict(di)
 
     def dump_dict(self):
-        pass
+        di = super().dump_dict()
+        di['pod_yml'] = self.pod_yml.save()
+        return di
 
     def yml(self):
         return self.pod_yml.yml()
