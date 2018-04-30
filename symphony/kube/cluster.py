@@ -229,7 +229,7 @@ class KubeCluster(Cluster):
             pg = self.describe_process_group(experiment_name, process_name)
             return pg[process_name]
 
-    def get_stdout(self, experiment_name, process_name, process_group=None,
+    def get_log(self, experiment_name, process_name, process_group=None,
                     follow=False, since=0, tail=100, print_logs=False):
         if process_group is None:
             pod_name, container_name = process_name, process_name
@@ -250,10 +250,6 @@ class KubeCluster(Cluster):
             print(out)
         else:
             return out
-
-    def get_stderr(self, experiment_name, process_name, follow=False,
-                    process_group=None, since=0, tail=100, print_logs=False):
-        self.get_stdout(experiment, process_name, process_group, since, tail, print_logs)
 
     def external_url(self, experiment_name, service_name):
         res = BeneDict(self.query_resources('svc', 'yaml',

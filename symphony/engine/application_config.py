@@ -21,8 +21,8 @@ class SymphonyConfigLoader(object):
             print('Generating default at {}'.format(config_path))
             print('Use SYMPH_GLOBAL_CONFIG to specify another config to use')
             print('-------------------------------------')
-            dump_yaml_file(self.default_config(), config_path)
-            config = BeneDict(load_yaml_file(config_path))
+            config = BeneDict(self.default_config())
+            config.dump_yaml_file(config_path)
 
         if 'SYMPH_CURRENT_CLUSTER' in os.environ:
             current_cluster = os.environ['SYMPH_CURRENT_CLUSTER']

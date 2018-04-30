@@ -385,7 +385,7 @@ class SymphonyInterface(object):
         """
         experiment_name = self._get_experiment(args)
         process_group_name, process_name = self._separate_component_path(args.component_name, experiment_name)
-        self.cluster.get_stdout(
+        self.cluster.get_log(
             experiment_name=experiment_name,
             process_name=process_name,
             process_group=process_group_name,
