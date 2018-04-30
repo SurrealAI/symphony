@@ -152,21 +152,18 @@ class Cluster(metaclass=_BackendRegistry):
         """
         raise NotImplementedError
 
-    def get_stdout(self, experiment_name, process_name, process_group=None,
-                    follow=False, since=0, tail=100, print_logs=False):
+    def get_log(self, experiment_name, process_name, process_group=None,
+                follow=False, since=0, tail=100, print_logs=False):
         """
-        Returns stdout of the process <process_name> under experiment <experiment_name>
+        Returns output of the process <process_name> under experiment
+        <experiment_name>
         Args:
-            process_group(string): None if process is stand alone
+            process_group(string): None if process is standalone
             follow(bool): set to True to wait for new logs
             since(int): the line to start getting logs from 
             tail(int): only get the last * lines of logs
             print_logs(bool): True to print logs to stdout
         """
-        raise NotImplementedError
-
-    def get_stderr(self, experiment_name, process_name, process_group=None,
-                    follow=False, since=0, tail=100, print_logs=False):
         raise NotImplementedError
 
     def external_service(self, experiment_name, service_name):

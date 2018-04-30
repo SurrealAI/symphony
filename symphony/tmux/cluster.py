@@ -207,7 +207,7 @@ class TmuxCluster(Cluster):
                 'status': 'live',
         }
 
-    def get_stdout(self, experiment_name, process_name, process_group_name=None,
+    def get_log(self, experiment_name, process_name, process_group_name=None,
                    history=None):
         """
         Args:
