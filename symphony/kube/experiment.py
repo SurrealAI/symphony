@@ -14,7 +14,6 @@ class KubeExperimentSpec(ExperimentSpec):
         if portrange is None:
             portrange = list(range(7000,9000))
         self.portrange = portrange
-        self.initial_portrange = copy.copy(portrange)
         self.binded_services = {}
         self.exposed_services = {}
 
@@ -70,48 +69,52 @@ class KubeExperimentSpec(ExperimentSpec):
         """
             Loop through all processes and assign addresses for all declared ports
         """
+        exposed = {}
+        binded = {}
+        portrange = copy.deepcopy(self.portrange)
         for process in self.list_all_processes():
             if process.standalone:
                 pod_yml = process.pod_yml
             else:
                 pod_yml = process.parent_process_group.pod_yml
-            for exposed_service_name in process.exposed_services:
-                if exposed_service_name in self.exposed_services:
-                    continue
-                port = process.exposed_services[exposed_service_name]
-                if port is None:
-                    port = self.get_port()
-                service = KubeCloudExternelService(exposed_service_name, port)
-                pod_yml.add_label('service-' + exposed_service_name, 'expose')
-                self.exposed_services[service.name] = service
-        for process in self.list_all_processes():
-            if process.standalone:
-                pod_yml = process.pod_yml
-            else:
-                pod_yml = process.parent_process_group.pod_yml
-            for binded_service_name in process.binded_services:
-                if binded_service_name in self.binded_services:
-                    continue
-                port = process.binded_services[binded_service_name]
-                if port is None:
-                    port = self.get_port()
-                service = KubeIntraClusterService(binded_service_name, port)
-                pod_yml.add_label('service-' + binded_service_name, 'bind')
-                self.binded_services[service.name] = service
 
-    def get_port(self):
-        if len(self.portrange) == 0:
+            for exposed_service_name in process.exposed_services:
+                pod_yml.add_label('service-' + exposed_service_name, 'expose')
+                port = process.exposed_services[exposed_service_name]
+                exposed[exposed_service_name] = port
+                if port in self.portrange:
+                    portrange.remove(port)
+
+            for binded_service_name in process.binded_services:
+                pod_yml.add_label('service-' + binded_service_name, 'bind')
+                port = process.binded_services[binded_service_name]
+                binded[binded_service_name] = port
+                if port in self.portrange:
+                    portrange.remove(port)                
+
+        for exposed_service_name, port in exposed.items():
+            if port is None:
+                port = self.get_port(portrange)
+            service = KubeCloudExternelService(exposed_service_name, port)
+            self.exposed_services[service.name] = service
+        for binded_service_name, port in binded.items():
+            if port is None:
+                port = self.get_port(portrange)
+            service = KubeIntraClusterService(binded_service_name, port)
+            self.binded_services[service.name] = service
+
+    def get_port(self, portrange):
+        if len(portrange) == 0:
             raise CompilationError('[Error] Experiment {} ran out of ports on Kubernetes.'.format(self.experiment.name))
-        return self.portrange.pop(0)
+        return portrange.pop(0)
 
     def _load_dict(self, di):
         super()._load_dict(di)
         self.portrange = compact_range_loads(di['portrange'])
-        self.initial_portrange = copy.copy(self.portrange)
 
     def dump_dict(self):
         di = super().dump_dict()
-        di['portrange'] = compact_range_dumps(self.initial_portrange)
+        di['portrange'] = compact_range_dumps(self.portrange)
         return di
 
 def compact_range_dumps(li):
