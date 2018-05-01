@@ -4,11 +4,13 @@ from symphony.utils.common import print_err, sanitize_name
 import webbrowser
 import argparse
 import re
+import sys
 
 
 def sanitize_experiment_name(name):
     """
         Allows None through so that kubecluster will use default name instead
+        TODO: update when tmux is in the picture
     """
     if name is None:
         return name
@@ -16,22 +18,26 @@ def sanitize_experiment_name(name):
         return sanitize_name(name)
 
 
-class SymphonyParser(object):
-    def __init__(self, interface=None):
-        if interface is None:
-            interface = SymphonyInterface
-        self.interface = interface
+class SymphonyCommandLine(object):
+    def __init__(self, subparsers):
+        """
+        This class adds parsers to sub_parser
+        Args:
+            sub_parser(generate by argparse.ArgumentParser().add_subparsers())
+        """
+        subparsers.required = True
+        self._subparsers = subparsers
 
-        self._master_parser = argparse.ArgumentParser()
-        self._add_dry_run(self._master_parser)
+        config = SymphonyConfig()
+        self.cluster = Cluster.new(config.cluster_type, **config.cluster_args)
+        self.claimed_commands = set()
 
-        self._subparsers = self._master_parser.add_subparsers(
-            help='symphony action commands',
-            dest='symphony_action'  # will store to parser.subcommand_name
-        )
-        self._subparsers.required = True
+        self.setup()
 
-    def setup_master(self):
+    # ======================================================
+    # ==================== Parser setup ====================
+    # ======================================================
+    def setup(self):
         """
         Main function that returns the configured parser
         """
@@ -48,31 +54,24 @@ class SymphonyParser(object):
         self._setup_log() #
         self._setup_visit() #
 
-        return self._master_parser
-
     def _add_subparser(self, name, aliases, **kwargs):
-        method_name = name.replace('-', '_')
-        raw_method = getattr(self.interface, method_name)  # Symphony.symphony_create()
-
-        def _symphony_func(args):
-            """
-            Get function that processes parsed args and runs symphony actions
-            """
-            symphony_interface = self.interface(args)
-            raw_method(symphony_interface, args)
+        self.claimed_commands.add(name)
+        for alias in aliases:
+            self.claimed_commands.add(alias)
+        method_name = 'symphony_' + name.replace('-', '_')
+        method_func = getattr(self, method_name)  # Symphony.symphony_create()
 
         parser = self._subparsers.add_parser(
             name,
-            help=raw_method.__doc__,
+            help=method_func.__doc__,
             aliases=aliases,
             **kwargs
         )
         self._add_dry_run(parser)
-        parser.set_defaults(func=_symphony_func)
+        parser.set_defaults(symph_func=method_func)
         return parser
 
-    # Action API
-
+    # ==================== Action API ====================
     def _setup_delete(self):
         parser = self._add_subparser('delete', aliases=['d'])
         self._add_experiment_name(parser, required=False, positional=True)
@@ -117,8 +116,7 @@ class SymphonyParser(object):
         self._add_component_arg(parser)
         self._add_experiment_name(parser, required=False, positional=True)
 
-    # Query API
-
+    # ==================== Query API ====================
     def _setup_log(self):
         parser = self._add_subparser('log', aliases=['logs', 'l'])
         self._add_component_arg(parser)
@@ -215,12 +213,9 @@ class SymphonyParser(object):
             help="[<process_group>/]<process>"
         )
 
-
-class SymphonyInterface(object):
-    def __init__(self, args):
-        config = SymphonyConfig()
-        self.cluster = Cluster.new(config.cluster_type, **config.cluster_args)
-
+    # ===============================================================
+    # ==================== Commandline functions ====================
+    # ===============================================================
     def _interactive_find_exp(self, name, max_matches=10):
         """
         Find partial match of namespace, ask user to verify before switching to
@@ -286,14 +281,14 @@ class SymphonyInterface(object):
         cluster.delete(experiment_name=to_delete)
         print('deleting all resources under experiment "{}"'.format(to_delete))
 
-    def delete(self, args):
+    def symphony_delete(self, args):
         """
         Stop an experiment, delete corresponding pods, services, and namespace.
         If experiment_name is omitted, default to deleting the current namespace.
         """
         self._symphony_delete(args.experiment_name, args.force, args.dry_run)
 
-    def delete_batch(self, args):
+    def symphony_delete_batch(self, args):
         """
         Stop an experiment, delete corresponding pods, services, and namespace.
         If experiment_name is omitted, default to deleting the current namespace.
@@ -304,7 +299,7 @@ class SymphonyInterface(object):
             if re.match(args.experiment_name, experiment):
                 self._symphony_delete(experiment, args.force, args.dry_run)
 
-    def list_experiments(self, args):
+    def symphony_list_experiments(self, args):
         """
         `symphony ls`: list all experiments
         aliases `symphony exps`, `symphony experiments`
@@ -312,7 +307,7 @@ class SymphonyInterface(object):
         for exp in self.cluster.list_experiments():
             print(exp)
 
-    def experiment(self, args):
+    def symphony_experiment(self, args):
         """
         `symphony exp`: show the current experiment
         `symphony exp <namespace>`: switch context to another experiment
@@ -339,7 +334,7 @@ class SymphonyInterface(object):
             sys.exit(1)
         return name
 
-    def process(self, args):
+    def symphony_process(self, args):
         """
             same as 'symphony list pod'
         """
@@ -349,7 +344,7 @@ class SymphonyInterface(object):
         output = self.print_experiment(status_headers, data)
         print(output)
         
-    def print_experiment(self, status_headers, data, min_width=5, max_width=1000, pad=2):
+    def symphony_print_experiment(self, status_headers, data, min_width=5, max_width=1000, pad=2):
         headers = ['Group', 'Name'] + status_headers
         columns = {x: [] for x in headers}
         for pg_name, process_group in data.items():
@@ -373,13 +368,7 @@ class SymphonyInterface(object):
             rows.append(row_format.format(*row_data))
         return '\n'.join(rows)
 
-    def symphony_describe(self, args):
-        """
-        Same as `kubectl describe pod <pod_name>`
-        """
-        self.kube.describe(args.pod_name, experiment_name=self._get_experiment(args))
-
-    def log(self, args):
+    def symphony_log(self, args):
         """
         Show logs of components:
         """
@@ -395,7 +384,7 @@ class SymphonyInterface(object):
             print_logs=True
         )
 
-    def exec(self, args):
+    def symphony_exec(self, args):
         """
         Exec command on a component:
         kubectl exec -ti <component> -- <command>
@@ -416,7 +405,7 @@ class SymphonyInterface(object):
             experiment_name=self._get_experiment(args)
         )
 
-    def scp(self, args):
+    def symphony_scp(self, args):
         """
         https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#cp
         symphony cp /my/local/file learner:/remote/file mynamespace
@@ -433,7 +422,7 @@ class SymphonyInterface(object):
                                     dest_process=dest_p, 
                                     dest_process_group=dest_pg)
 
-    def ssh(self, args):
+    def symphony_ssh(self, args):
         """
         Interactive /bin/bash into the pod
         kubectl exec -ti <component> -- /bin/bash
@@ -442,7 +431,7 @@ class SymphonyInterface(object):
         pg, p = self._separate_component_path(args.component_name, exp)
         self.cluster.login(experiment_name=exp, process_name=p, process_group_name=pg)
 
-    def visit(self, args):
+    def symphony_visit(self, args):
         url = self.cluster.external_url(self._get_experiment(args), args.service_name)
         if url:
             url = 'http://' + url
@@ -452,6 +441,9 @@ class SymphonyInterface(object):
         else:
             print_err('Tensorboard does not yet have an external IP.')
 
+    # =============================================================
+    # ==================== Commandline helpers ====================
+    # =============================================================
     def _separate_component_path(self, path, experiment_name):
         """
         Args:
@@ -487,3 +479,68 @@ class SymphonyInterface(object):
             return pg, p, path
         else:
             return None, None, f
+
+def create_symphony_parser():
+    """
+    Creates a master parser with sub_parsers
+    Returns:
+        master_parser(argparse.ArgumentParser())
+        subparsers(master_parser.add_subparsers(help='action commands',dest='action'))
+        claimed_commands(set(string)): commands used by symphony
+    """
+    master_parser = argparse.ArgumentParser()
+
+    subparsers = master_parser.add_subparsers(
+        help='action commands',
+        dest='action'  # will store to parser.subcommand_name
+    )
+    symph_cmd = SymphonyCommandLine(subparsers)
+    return master_parser, subparsers, symph_cmd.claimed_commands
+
+def add_symphony_parser(subparsers):
+    """
+    Takes add symphony command to subparsers
+    Args:
+        subparsers: subparsers that symphony adds commands to
+    Returns:
+        claimed_commands(set(string)): commands used by symphony
+    """
+    symph_cmd = SymphonyCommandLine(subparsers)
+    return symph_cmd.claimed_commands
+
+def symph_parse_args(parser, argv=None):
+    """
+    Truncates argv by removing everything after '--'.
+    Args:
+        argv(list(str))
+    """
+    if argv is None:
+        argv = sys.argv[1:]
+    assert argv.count('--') <= 1, \
+        'command line can only have at most one "--"'
+    if '--' in argv:
+        idx = argv.index('--')
+        remainder = argv[idx+1:]
+        argv = argv[:idx]
+        has_remainder = True  # even if remainder itself is empty
+    else:
+        remainder = []
+        has_remainder = False
+
+    args = parser.parse_args(argv)
+    args.remainder = remainder
+    args.has_remainder = has_remainder
+
+    return args, argv
+
+def symph_exec_args(args):
+    """
+    If the command is symphony related, execute the command and return True
+    Otherwise, return False
+    This is done by reading symph_func field of the namespace
+    """
+    if 'symph_func' in args:
+        args.symph_func(args)
+        return True
+    return False
+    return argv, has_remainder, remainder

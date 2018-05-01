@@ -1,24 +1,21 @@
-from symphony.commandline import SymphonyParser
+from symphony.commandline import *
 import sys
 
 def main():
-    parser = SymphonyParser().setup_master()
-    assert sys.argv.count('--') <= 1, \
-        'command line can only have at most one "--"'
-    if '--' in sys.argv:
-        idx = sys.argv.index('--')
-        remainder = sys.argv[idx+1:]
-        sys.argv = sys.argv[:idx]
-        has_remainder = True  # even if remainder itself is empty
-    else:
-        remainder = []
-        has_remainder = False
-        
-    args = parser.parse_args()
-    args.remainder = remainder
-    args.has_remainder = has_remainder
-    args.func(args)
+    # Create a parser with symphony related subparsers
+    master_parser, subparsers, claimed_commands = create_symphony_parser()
+    # or claimed_commands = add_symphony_parser(subparsers)
+    
+    # optionally add your own subparsers
+    subparsers.add_parser('nothing',help='does nothing')
 
+    args, _ = symph_parse_args(master_parser)
+    # args, argv = symph_parse_args(master_parser)
+
+    is_symph = symph_exec_args(args)
+    if not is_symph:
+        print('called nothing')
+        print('claimed commands', claimed_commands)
 
 if __name__ == '__main__':
     main() 
