@@ -5,7 +5,7 @@ from benedict.data_format import load_yaml_file, dump_yaml_file
 from benedict import BeneDict
 
 
-class SymphonyConfigLoader(object):
+class _SymphonyConfigLoader(object):
     def __init__(self):
         self.load_global_settings()
         if 'SYMPH_CONFIG_FILE' in os.environ:
@@ -85,5 +85,5 @@ class SymphonyConfig(object):
     __instance = None
     def __new__(cls): # __new__ always a classmethod
         if not SymphonyConfig.__instance:
-            SymphonyConfig.__instance = SymphonyConfigLoader()
+            SymphonyConfig.__instance = _SymphonyConfigLoader()
         return SymphonyConfig.__instance
