@@ -225,7 +225,10 @@ class Cluster(metaclass=_BackendRegistry):
         return matches
 
     def prefix_username(self, name):
-        return SymphonyConfig().experiment_name_prefix + '-' + name
+        username = SymphonyConfig().username
+        if username is None:
+            return name
+        return username + '-' + name
 
     def _deduplicate_with_order(self, seq):
         """

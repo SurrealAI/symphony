@@ -341,12 +341,13 @@ class SymphonyCommandLine(object):
         name = self._get_experiment(args)
         status_headers = self.cluster.status_headers()
         data = self.cluster.describe_experiment(name)
-        output = self.print_experiment(status_headers, data)
+        output = self._print_experiment(status_headers, data)
         print(output)
         
-    def symphony_print_experiment(self, status_headers, data, min_width=5, max_width=1000, pad=2):
+    def _print_experiment(self, status_headers, data, min_width=5, max_width=1000, pad=2):
         headers = ['Group', 'Name'] + status_headers
         columns = {x: [] for x in headers}
+        print(data)
         for pg_name, process_group in data.items():
             for p_name, status in process_group.items():
                 if pg_name is None:

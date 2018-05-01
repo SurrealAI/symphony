@@ -7,7 +7,7 @@ def main():
     # or claimed_commands = add_symphony_parser(subparsers)
     
     # optionally add your own subparsers
-    subparsers.add_parser('nothing',help='does nothing')
+    subparsers.add_parser('nothing', help='does nothing')
 
     args, _ = symph_parse_args(master_parser)
     # args, argv = symph_parse_args(master_parser)

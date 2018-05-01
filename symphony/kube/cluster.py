@@ -114,7 +114,7 @@ class KubeCluster(Cluster):
         e.g.
             'status', 'timestamp'
         """
-        return ['Ready', 'Restarts', 'Status']
+        return ['Ready', 'Restarts', 'State']
 
     def describe_experiment(self, experiment_name):
         """
