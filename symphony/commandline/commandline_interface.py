@@ -339,22 +339,28 @@ class SymphonyCommandLine(object):
             same as 'symphony list pod'
         """
         name = self._get_experiment(args)
-        status_headers = self.cluster.status_headers()
         data = self.cluster.describe_experiment(name)
-        output = self._print_experiment(status_headers, data)
+        output = self._print_experiment(data)
         print(output)
         
-    def _print_experiment(self, status_headers, data, min_width=5, max_width=1000, pad=2):
-        headers = ['Group', 'Name'] + status_headers
-        columns = {x: [] for x in headers}
+    def _print_experiment(self, data, min_width=5, max_width=1000, pad=2):
+        headers = ['Group', 'Name']
+        columns = {'Group': [], 'Name': []}
+        counter = 0
         for pg_name, process_group in data.items():
             for p_name, status in process_group.items():
                 if pg_name is None:
                     pg_name = ''
                 columns['Group'].append(pg_name)
                 columns['Name'].append(p_name)
-                for header in status_headers:
+                for header in status.keys():
+                    if not header in headers:
+                        headers.append(header)
+                        columns[header] = []
+                        for i in range(counter): # pad missing terms
+                            columns[header].append('')
                     columns[header].append(str(status[header]))
+                counter += 1
         width = {}
         for key in columns:
             w = max([len(x) for x in columns[key]] + [len(key)]) + 2

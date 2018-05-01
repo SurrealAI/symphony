@@ -106,15 +106,6 @@ class Cluster(metaclass=_BackendRegistry):
         """
         raise NotImplementedError
 
-    def status_headers(self):
-        """
-        Returns:
-            list of status fields for each process
-        e.g.
-            'status', 'timestamp'
-        """
-        raise NotImplementedError
-
     def describe_experiment(self, experiment_name):
         """
         Returns:

@@ -106,15 +106,6 @@ class KubeCluster(Cluster):
         filtered_namespaces = [x for x in all_namespaces if x not in _RESERVED_NS]
         return filtered_namespaces
 
-    def status_headers(self):
-        """
-        Returns:
-            list of status fields for each process
-        e.g.
-            'status', 'timestamp'
-        """
-        return ['Ready', 'Restarts', 'State']
-
     def describe_experiment(self, experiment_name):
         """
         Returns:
