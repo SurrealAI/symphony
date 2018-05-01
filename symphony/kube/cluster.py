@@ -26,9 +26,8 @@ class KubeCluster(Cluster):
             print(launch_plan)
         else:
             # TODO: some of them should be shared
-            self.set_namespace(experiment.name)
+            self.set_experiment(experiment.name)
             self.fs.save_experiment(experiment)
-            launch_plan_file = self.fs.save_launch_plan(experiment.name, launch_plan, 'kubernetes')
             #TODO: persist yaml file
             runner.run_verbose('kubectl create namespace ' + experiment.name, dry_run=self.dry_run)
             runner.run_verbose('kubectl create -f "{}" --namespace {}'.format(launch_plan_file, experiment.name), dry_run=self.dry_run)
@@ -283,7 +282,7 @@ class KubeCluster(Cluster):
                 return context['context']['namespace']
         raise RuntimeError('INTERNAL: current context not found')
 
-    def set_namespace(self, namespace):
+    def set_experiment(self, namespace):
         """
         https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
         After this call, all subsequent `kubectl` will default to the namespace

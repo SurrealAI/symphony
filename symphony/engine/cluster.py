@@ -192,7 +192,18 @@ class Cluster(metaclass=_BackendRegistry):
                     found.append(process_group_name)
         return found
 
+    def set_experiment(self, experiment_name):
+        """
+        Args:
+            experiment_name(str): to be set to default
+        """
+        raise NotImplementedError
 
+    def current_experiment(self):
+        """
+        Returns experiment_name
+        """
+        raise NotImplementedError
     # ========================================================
     # ================= Helper functions =====================
     # ========================================================

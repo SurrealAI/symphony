@@ -318,7 +318,7 @@ class SymphonyCommandLine(object):
             name = self._interactive_find_exp(name)
             if name is None:
                 return
-            cluster.set_namespace(name)
+            cluster.set_experiment(name)
         else:
             print(cluster.current_experiment())
 
@@ -347,7 +347,6 @@ class SymphonyCommandLine(object):
     def _print_experiment(self, status_headers, data, min_width=5, max_width=1000, pad=2):
         headers = ['Group', 'Name'] + status_headers
         columns = {x: [] for x in headers}
-        print(data)
         for pg_name, process_group in data.items():
             for p_name, status in process_group.items():
                 if pg_name is None:
@@ -396,7 +395,7 @@ class SymphonyCommandLine(object):
             raise RuntimeError(
                 'please enter your command after "--". '
                 'One and only one "--" must be present. \n'
-                'Example: symphony exec learner [optional-namespace] -- ls -alf /fs/'
+                'Example: symphony exec learner [optional-experiment_name] -- ls -alf /fs/'
             )
         commands = args.remainder
         self.cluster.exec_command(
