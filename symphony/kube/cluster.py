@@ -1,6 +1,14 @@
 from symphony.engine import Cluster
-from .experiment import KubeExperimentSpec
+from symphony.utils.common import check_valid_dns, is_sequence
 import symphony.utils.runner as runner
+from .experiment import KubeExperimentSpec
+from benedict.data_format import load_yaml_str, load_json_str
+from benedict import BeneDict
+from datetime import datetime
+import shlex
+
+
+_RESERVED_NS = ['default', 'kube-public', 'kube-system']
 
 
 class KubeCluster(Cluster):
@@ -18,9 +26,8 @@ class KubeCluster(Cluster):
             print(launch_plan)
         else:
             # TODO: some of them should be shared
-            self.set_namespace(experiment.name)
+            self.set_experiment(experiment.name)
             self.fs.save_experiment(experiment)
-            launch_plan_file = self.fs.save_launch_plan(experiment.name, launch_plan, 'kubernetes')
             #TODO: persist yaml file
             runner.run_verbose('kubectl create namespace ' + experiment.name, dry_run=self.dry_run)
             runner.run_verbose('kubectl create -f "{}" --namespace {}'.format(launch_plan_file, experiment.name), dry_run=self.dry_run)
@@ -30,63 +37,221 @@ class KubeCluster(Cluster):
     # ========================================================    
 
     def delete(self, experiment_name):
+        assert experiment_name not in _RESERVED_NS, \
+            'cannot delete reserved names: default, kube-public, kube-system'
         check_valid_dns(experiment_name)
         runner.run_verbose(
             'kubectl delete namespace {}'.format(experiment_name),
             print_out=True, raise_on_error=False
         )
 
-#    def delete_batch(self, experiments):
+    # def delete_batch(self, experiments):
 
-    def transfer_file(self, experiment_name, src, dest):
+    def transfer_file(self, experiment_name, src_path, dest_path, src_process=None, src_process_group=None, 
+                    dest_process=None, dest_process_group=None):
         """
-        scp for remote backends
+        scp for remote backends:
         """
-        if experiment_name is None:
-            experiment_name = self.current_experiment()
-
-        src_name, src_path = self._format_scp_path(src_file, experiment_name)
-        dest_name, dest_path = self._format_scp_path(dest_file, experiment_name)
-        assert (src_name is None) != (dest_name is None), \
-            '[Error] one of "src_file" and "dest_file" must be remote and the other local.'
-        cmd = 'kubectl cp {} {}'.format(src_path, dest_path)
+        src_filepath = self._format_scp_path(src_process, src_process_group, src_path)
+        dest_filepath = self._format_scp_path(dest_process, dest_process_group, dest_path)
+        cmd = 'kubectl cp {} {} {}'.format(src_filepath, dest_filepath, 
+                                            self._get_ns_cmd(experiment_name))
         runner.run_raw(cmd, print_cmd=True, dry_run=self.dry_run)
 
-    def login(self, *args, **kwargs):
+    def _format_scp_path(self, pg, p, path):
+        if p is None:
+            return path
+        else:
+            if pg is None:
+                pg = p
+            return '{}:{} -c {}'.format(pg, path, p)
+
+    def login(self, experiment_name, process_name, process_group_name=None):
         """
         ssh for remote backends
         """
-        raise NotImplementedError
+        self.exec_command(experiment_name, process_name, 'bash', process_group_name)
 
-    def exec_command(self, *args, **kwargs):
-        raise NotImplementedError
+    def exec_command(self, experiment_name, process_name, command, process_group_name=None):
+        """
+        kubectl exec -ti
+
+        Args: 
+        
+        Returns:
+            stdout string if is_print else None
+        """
+        if is_sequence(command):
+            command = ' '.join(map(shlex.quote, command))
+        ns_cmd = self._get_ns_cmd(experiment_name)
+        if process_group_name is None:
+            pod_name, container_name = process_name, process_name
+        else:
+            pod_name, container_name = process_group_name, process_name
+        return runner.run_raw('kubectl exec -ti {} -c {} {} -- {}'.format(pod_name, 
+                container_name, ns_cmd, command), dry_run=self.dry_run)
 
     # ========================================================
     # ===================== Query API ========================
     # ========================================================
+
     def list_experiments(self):
+        """
+        Returns:
+            list of experiment names
+        """
         all_names = self.query_resources('namespace', output_format='name')
         # names look like namespace/<actual_name>, need to postprocess
-        return [n.split('/')[-1] for n in all_names]
+        all_namespaces = [n.split('/')[-1] for n in all_names]
+        filtered_namespaces = [x for x in all_namespaces if x not in _RESERVED_NS]
+        return filtered_namespaces
 
-    def fuzzy_match_experiments(self):
-        # TODO
-        pass
+    def describe_experiment(self, experiment_name):
+        """
+        Returns:
+        {
+            'pgroup1': {
+                'p1': {'status': 'live', 'timestamp': '11:23'},
+                'p2': {'status': 'dead'}
+            },
+            None: {  # always have all the processes
+                'p3_lone': {'status': 'running'}
+            }
+        }
+        """
+        all_processes = BeneDict(self.query_resources('pod',output_format='json',
+                                            namespace=experiment_name))
+        out = BeneDict()
+        for pod in all_processes.items:
+            pod_name = pod.metadata.name
+            container_statuses = self._parse_container_statuses(
+                                    pod.status.containerStatuses)
+            # test if the process is stand-alone
+            if len(container_statuses) == 1 and list(container_statuses.keys())[0] == pod_name:
+                if not None in out:
+                    out[None] = BeneDict()
+                out[None][pod_name] = container_statuses[pod_name]
+            else:
+                out[pod_name] = container_statuses
+        return out
 
-    def list_process_groups(self, experiment):
-        raise NotImplementedError
+    def _parse_container_statuses(self, li):
+        out = {}
+        for container_status in li:
+            container_name = container_status.name
+            state = list(container_status.state.keys())[0]
+            state_info = container_status.state[state]
+            out[container_name] = BeneDict({
+                'Ready': str(int(container_status.ready)),
+                'Restarts': str(int(container_status.restartCount)),
+                'State': self._parse_container_state_info(state, state_info)
+            })
+        return out
 
-    def list_processes(self, experiment, process_group=None):
-        raise NotImplementedError
+    def _parse_container_state_info(self, state, state_info):
+        if state == 'waiting':
+            return 'waiting: {}'.format(state_info.reason)
+        elif state == 'running':
+            return 'running: {}'.format(self._get_age(state_info.startedAt))
+        elif state == 'completed':
+            return 'completed ({}) after {}: {}'.format(state_info.exitCode,
+                    self._get_age(state_info.startedAt,state_info.finishedAt),
+                                            state_info.reason)
 
-    def status(self, experiment, process, process_group=None):
-        raise NotImplementedError
+    def _get_age(self, start_time_str, finish_time_str=None):
+        """
+        Args:
+            start_time_str: ISO time string '%Y-%m-%dT%H:%M:%SZ' for start time
+            finish_time_str: ISO time string or UTC now 
+        """
+        start_time = datetime.strptime(start_time_str, '%Y-%m-%dT%H:%M:%SZ')
+        if finish_time_str:
+            finish_time = datetime.strptime(finish_time_str, '%Y-%m-%dT%H:%M:%SZ')
+        else:
+            finish_time = datetime.utcnow()
+        return self._format_time_delta(finish_time - start_time)
 
-    def get_stdout(self, experiment, process, process_group=None):
-        raise NotImplementedError
+    def _format_time_delta(self, delta):
+        seconds = abs(delta.seconds)
+        days = abs(delta.days)
+        if days:
+            hrs = seconds // 3600
+            return '{}d{}h'.format(days,hrs)
+        else:
+            minutes = seconds // 60
+            hrs = seconds / 3600
+            if seconds < 60:
+                return '{}s'.format(seconds)
+            elif seconds < 3600:
+                return '{}m'.format(minutes)
+            else:
+                return '{:.1f}h'.format(hrs)
 
-    def get_stderr(self, experiment, process, process_group=None):
-        raise NotImplementedError
+    def describe_process_group(self,
+                               experiment_name,
+                               process_group_name):
+        """
+        Returns:
+        {
+            'p1': {'status': 'live', 'timestamp': '11:23'},
+            'p2': {'status': 'dead'}
+        }
+        """
+        res = self.query_resources('pod',names=[process_group_name],output_format='json',
+                                            namespace=experiment_name)
+        if not res:
+            raise ValueError('Cannot find process_group {} in experiment {}'.format(process_group_name, experiment_name))
+        pod = BeneDict(res)
+        return self._parse_container_statuses(pod.status.containerStatuses)
+
+    def describe_process(self,
+                         experiment_name,
+                         process_name,
+                         process_group_name=None):
+        """
+        Returns:
+            {'status: 'live', 'timestamp': '23:34'}
+        """
+        if process_group_name is not None:
+            pg = self.describe_process_group(experiment_name, process_group_name)
+            return pg[process_name]
+        else: # standalone process is in a pod with name same as its process group
+            pg = self.describe_process_group(experiment_name, process_name)
+            return pg[process_name]
+
+    def get_log(self, experiment_name, process_name, process_group=None,
+                    follow=False, since=0, tail=100, print_logs=False):
+        if process_group is None:
+            pod_name, container_name = process_name, process_name
+        else:
+            pod_name, container_name = process_group, process_name
+        out, err, retcode = runner.run_verbose(
+            self._get_logs_cmd(
+                pod_name, process_name, follow=follow,
+                since=since, tail=tail, namespace=experiment_name
+            ),
+            print_out=print_logs,
+            raise_on_error=True,
+            dry_run=self.dry_run
+        )
+        if retcode != 0:
+            return ''
+        elif print_logs:
+            print(out)
+        else:
+            return out
+
+    def external_url(self, experiment_name, service_name):
+        res = BeneDict(self.query_resources('svc', 'yaml',
+                                  names=[service_name], namespace=experiment_name))
+        conf = res.status.loadBalancer
+        if not ('ingress' in conf and 'ip' in conf.ingress[0]):
+            raise ValueError('Service {} not found in experiment {}'.format(service_name, experiment_name))
+        ip = conf.ingress[0].ip
+        port = res.spec.ports[0].port
+        return '{}:{}'.format(ip, port)
+
+    ### other
 
     def current_context(self):
         out, err, retcode = runner.run_verbose(
@@ -108,12 +273,7 @@ class KubeCluster(Cluster):
                 return context['context']['namespace']
         raise RuntimeError('INTERNAL: current context not found')
 
-    def list_experiments(self):
-        all_names = self.query_resources('namespace', output_format='name')
-        # names look like namespace/<actual_name>, need to postprocess
-        return [n.split('/')[-1] for n in all_names]
-
-    def set_namespace(self, namespace):
+    def set_experiment(self, namespace):
         """
         https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
         After this call, all subsequent `kubectl` will default to the namespace
@@ -125,45 +285,6 @@ class KubeCluster(Cluster):
         )
         if not self.dry_run and retcode == 0:
             print('successfully switched to namespace `{}`'.format(namespace))
-
-    def _deduplicate_with_order(self, seq):
-        """
-        https://stackoverflow.com/questions/480214/how-do-you-remove-duplicates-from-a-list-in-whilst-preserving-order
-        deduplicate list while preserving order
-        """
-        return list(collections.OrderedDict.fromkeys(seq))
-
-    def prefix_username(self, name):
-        print(name)
-        return SymphonyConfig().experiment_name_prefix + '-' + name
-
-    def fuzzy_match_experiment(self, name, max_matches=10):
-        """
-        Fuzzy match experiment_name, precedence from high to low:
-        1. exact match of <prefix + name>, if prefix option is turned on in ~/.surreal.yml
-        2. exact match of <name> itself
-        3. starts with <prefix + name>, sorted alphabetically
-        4. starts with <name>, sorted alphabetically
-        5. contains <name>, sorted alphabetically
-        Up to `max_matches` number of matches
-
-        Returns:
-            - string if the matching is exact
-            - OR list of fuzzy matches
-        """
-        all_names = self.list_experiments()
-        prefixed_name = self.prefix_username(name)
-        if prefixed_name in all_names:
-            return prefixed_name
-        if name in all_names:
-            return name
-        # fuzzy matching
-        matches = []
-        matches += sorted([n for n in all_names if n.startswith(prefixed_name)])
-        matches += sorted([n for n in all_names if n.startswith(name)])
-        matches += sorted([n for n in all_names if name in n])
-        matches = self._deduplicate_with_order(matches)
-        return matches[:max_matches]
 
     def _get_selectors(self, labels, fields):
         """
@@ -233,9 +354,9 @@ class KubeCluster(Cluster):
         cmd += ' -o ' + output_format
         out, _, _ = runner.run_verbose(cmd, print_out=False, raise_on_error=True, dry_run=self.dry_run)
         if output_format == 'yaml':
-            return BeneDict.loads_yaml(out)
+            return load_yaml_str(out)
         elif output_format == 'json':
-            return BeneDict.loads_json(out)
+            return load_json_str(out)
         elif output_format == 'name':
             return out.split('\n')
         else:
@@ -265,7 +386,10 @@ class KubeCluster(Cluster):
         """
         if '{' not in jsonpath:
             jsonpath = '{' + jsonpath + '}'
-        jsonpath = '{range .items[*]}' + jsonpath + '{"\\n\\n"}{end}'
+        if names is not None and len(names) == 1:
+            jsonpath = jsonpath
+        else:
+            jsonpath = '{range .items[*]}' + jsonpath + '{"\\n\\n"}{end}'
         output_format = "jsonpath=" + jsonpath
         out = self.query_resources(
             resource=resource,
@@ -286,24 +410,7 @@ class KubeCluster(Cluster):
             'kubectl config view', print_out=False, 
             raise_on_error=True, dry_run=self.dry_run
         )
-        return BeneDict.loads_yaml(out)
-
-    def external_ip(self, service_name, experiment_name=None):
-        """
-        Returns:
-            "<ip>:<port>": if service is found
-            None: otherwise
-        """
-        if experiment_name is None:
-            experiment_name = self.current_experiment()
-        res = self.query_resources('svc', 'yaml',
-                                  names=[service_name], namespace=experiment_name)
-        conf = res.status.loadBalancer
-        if not ('ingress' in conf and 'ip' in conf.ingress[0]):
-            return None
-        ip = conf.ingress[0].ip
-        port = res.spec.ports[0].port
-        return '{}:{}'.format(ip, port)
+        return BeneDict(load_yaml_str(out))
 
     def _get_ns_cmd(self, namespace):
         if namespace:
@@ -321,142 +428,3 @@ class KubeCluster(Cluster):
             tail,
             self._get_ns_cmd(namespace)
         )
-
-    def get_pod_container(self, experiment_name, process_name):
-        experiment = self.fs.load_experiment(experiment_name)
-        for process in experiment.processes.values():
-            if process.name == process_name:
-                if process.process_group is not None:
-                    pod_name = process.process_group.name
-                else:
-                    pod_name = process.name
-                return pod_name, process_name
-        raise ValueError('[Error] Cannot find processs with name: {}'.format(process_name))
-
-    def logs(self,process_name, since=0,tail=100,experiment_name=None):
-        """
-        kubectl logs <pod_name> <container_name> --follow --since= --tail=
-        https://kubernetes-v1-4.github.io/docs/user-guide/kubectl/kubectl_logs/
-
-        Returns:
-            stdout string
-        """
-        if experiment_name is None:
-            experiment_name = self.current_experiment()
-        pod_name, container_name = self.get_pod_container(experiment_name, process_name)
-        out, err, retcode = runner.run_verbose(
-            self._get_logs_cmd(
-                pod_name, process_name, follow=False,
-                since=since, tail=tail, namespace=experiment_name
-            ),
-            print_out=False,
-            raise_on_error=False,
-            dry_run=self.dry_run
-        )
-        if retcode != 0:
-            return ''
-        else:
-            return out
-
-    def logs_print(self,process_name,follow=False,
-                since=0,tail=100,experiment_name=None):
-        """
-        kubectl logs <pod_name> <container_name> --follow --since= --tail=
-        https://kubernetes-v1-4.github.io/docs/user-guide/kubectl/kubectl_logs/
-
-        prints the logs to stdout of program
-
-        Returns:
-            exit code
-        """
-        if experiment_name is None:
-            experiment_name = self.current_experiment()
-        pod_name, container_name = self.get_pod_container(experiment_name, process_name)
-        return runner.run_raw(
-            self._get_logs_cmd(
-                pod_name, process_name, follow=follow,
-                since=since, tail=tail, namespace=experiment_name
-            ),
-            print_cmd=False,
-            dry_run=self.dry_run
-        )
-
-    def describe(self, process_name, experiment_name=None):
-        if experiment_name is None:
-            experiment_name = self.current_experiment()
-        pod_name, container_name = self.get_pod_container(experiment_name, process_name)
-        cmd = 'kubectl describe pod ' + pod_name + self._get_ns_cmd(experiment_name)
-        return runner.run_verbose(cmd, print_out=True, 
-                    raise_on_error=False, dry_run=self.dry_run)
-
-    def print_logs(self, process_name,follow=False,since=0,tail=100,experiment_name=None):
-        """
-        kubectl logs <pod_name> <container_name>
-        No error checking, no string caching, delegates to os.system
-        """
-        if experiment_name is None:
-            experiment_name = self.current_experiment()
-        pod_name, container_name = self.get_pod_container(experiment_name, process_name)
-        cmd = self._get_logs_cmd(
-            pod_name, container_name, follow=follow,
-            since=since, tail=tail, namespace=namespace,dry_run=self.dry_run
-        )
-        runner.run_raw(cmd, dry_run=self.dry_run)
-
-    def exec(self, process_name, cmd, experiment_name=None):
-        """
-        kubectl exec -ti
-
-        Args:
-            component_name: can be agent-N, learner, ps, replay, tensorplex, tensorboard
-            cmd: either a string command or a list of command args
-
-        Returns:
-            stdout string if is_print else None
-        """
-        if is_sequence(cmd):
-            cmd = ' '.join(map(shlex.quote, cmd))
-        if experiment_name is None:
-            experiment_name = self.current_experiment()
-        ns_cmd = self._get_ns_cmd(experiment_name)
-        pod_name, container_name = self.get_pod_container(experiment_name, process_name)
-        return runner.run_raw('kubectl exec -ti {} -c {} {} -- {}'.format(pod_name, 
-                container_name, ns_cmd, cmd), dry_run=self.dry_run)
-
-    def ssh(self, process_name, experiment_name=None):
-        """
-        kubectl exec -ti
-
-        Args:
-            TODO:
-
-        Returns:
-            TODO:
-        """
-        self.exec(process_name, 'bash', experiment_name)
-
-    def _format_scp_path(self, f, experiment_name):
-        if ':' in f:
-            process_name, path = f.split(':')
-            pod, container = self.get_pod_container(experiment_name, process_name)
-            return process_name, '{}:{} -c {}'.format(pod, path, container)
-        else:
-            return None, f
-
-    # TODO: this is renamed 
-    def scp(self, src_file, dest_file, experiment_name=None):
-        """
-        https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#cp
-        kurreal cp /my/local/file learner:/remote/file mynamespace
-        is the same as
-        kubectl cp /my/local/file mynamespace/nonagent:/remote/file -c learner
-        """
-        if experiment_name is None:
-            experiment_name = self.current_experiment()
-
-        src_name, src_path = self._format_scp_path(src_file, experiment_name)
-        dest_name, dest_path = self._format_scp_path(dest_file, experiment_name)
-        assert (src_name is None) != (dest_name is None), \
-            '[Error] one of "src_file" and "dest_file" must be remote and the other local.'
-        cmd = 'kubectl cp {} {}'.format(src_path, dest_path)
-        runner.run_raw(cmd, print_cmd=True, dry_run=self.dry_run)
