@@ -50,7 +50,7 @@ class ProcessSpec(BaseSpec):
         if isinstance(spec, dict):
             for x in spec:
                 check_valid_dns(x)
-            return {spec}
+            return spec
 
     # TODO: docs about bind/connect/expose input format
     def binds(self, spec):

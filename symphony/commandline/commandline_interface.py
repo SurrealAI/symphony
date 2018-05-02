@@ -151,6 +151,11 @@ class SymphonyCommandLine(object):
             'experiment',
             aliases=['exp']
         )
+        parser.add_argument(
+            '-f', '--force',
+            action='store_true',
+            help='Switch to the experiment even if it does not exist on cluster'
+        )
         # no arg to get the current namespace
         self._add_experiment_name(parser, required=False, positional=True)
     
@@ -314,7 +319,9 @@ class SymphonyCommandLine(object):
         """
         cluster = self.cluster
         name = args.experiment_name
-        if name:
+        if name and args.force:
+            cluster.set_experiment(name)
+        elif name:
             name = self._interactive_find_exp(name)
             if name is None:
                 return
@@ -344,11 +351,15 @@ class SymphonyCommandLine(object):
         print(output)
         
     def _print_experiment(self, data, min_width=5, max_width=1000, pad=2):
+        if len(data) == 0:
+            return ''
         headers = ['Group', 'Name']
-        columns = {'Group': [], 'Name': []}
+        columns = {x:[] for x in headers}
         counter = 0
-        for pg_name, process_group in data.items():
-            for p_name, status in process_group.items():
+        for pg_name in data.keys():
+            process_group = data[pg_name]
+            for p_name in process_group.keys():
+                status = process_group[p_name]
                 if pg_name is None:
                     pg_name = ''
                 columns['Group'].append(pg_name)

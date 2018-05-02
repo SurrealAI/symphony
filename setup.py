@@ -34,7 +34,7 @@ setup(
         "Programming Language :: Python :: 3"
     ],
     install_requires=[
-        "BeneDict"
+        "BeneDict>=0.3"
     ],
     entry_points={
         'console_scripts': [

@@ -1,10 +1,12 @@
-from symphony.engine import Cluster
+from symphony.engine import Cluster, FSManager
 from symphony.utils.common import check_valid_dns, is_sequence
 import symphony.utils.runner as runner
 from .experiment import KubeExperimentSpec
-from benedict.data_format import load_yaml_str, load_json_str
+from benedict.data_format import load_yaml_str, load_json_str, dump_yaml_file
 from benedict import BeneDict
 from datetime import datetime
+from pathlib import Path
+from collections import OrderedDict
 import shlex
 
 
@@ -14,23 +16,28 @@ _RESERVED_NS = ['default', 'kube-public', 'kube-system']
 class KubeCluster(Cluster):
     def __init__(self, dry_run=False):
         self.dry_run = dry_run
+        self.fs = FSManager()
 
     def new_experiment(self, *args, **kwargs):
         return KubeExperimentSpec(*args, **kwargs)
 
     def launch(self, experiment_spec):
-        print('launching', experiment_spec)
+        print('launching', experiment_spec.name)
         launch_plan = experiment_spec.compile()
 
         if self.dry_run:
             print(launch_plan)
         else:
             # TODO: some of them should be shared
-            self.set_experiment(experiment.name)
-            self.fs.save_experiment(experiment)
+            self.set_experiment(experiment_spec.name)
+            experiment_file = Path(self.fs.save_experiment(experiment_spec))
+            experiment_folder = experiment_file.parent
+            launch_plan_file = experiment_folder / 'kube.yml'
+            with launch_plan_file.open('w') as f:
+                f.write(launch_plan)
             #TODO: persist yaml file
-            runner.run_verbose('kubectl create namespace ' + experiment.name, dry_run=self.dry_run)
-            runner.run_verbose('kubectl create -f "{}" --namespace {}'.format(launch_plan_file, experiment.name), dry_run=self.dry_run)
+            runner.run_verbose('kubectl create namespace ' + experiment_spec.name, dry_run=self.dry_run)
+            runner.run_verbose('kubectl create -f "{}" --namespace {}'.format(launch_plan_file, experiment_spec.name), dry_run=self.dry_run)
 
     # ========================================================
     # ===================== Action API =======================
@@ -106,6 +113,9 @@ class KubeCluster(Cluster):
         filtered_namespaces = [x for x in all_namespaces if x not in _RESERVED_NS]
         return filtered_namespaces
 
+    def describe_headers(self):
+        return ['Ready', 'Restarts', 'State']
+
     def describe_experiment(self, experiment_name):
         """
         Returns:
@@ -121,31 +131,42 @@ class KubeCluster(Cluster):
         """
         all_processes = BeneDict(self.query_resources('pod',output_format='json',
                                             namespace=experiment_name))
-        out = BeneDict()
+        out = OrderedDict()
         for pod in all_processes.items:
             pod_name = pod.metadata.name
-            container_statuses = self._parse_container_statuses(
-                                    pod.status.containerStatuses)
-            # test if the process is stand-alone
-            if len(container_statuses) == 1 and list(container_statuses.keys())[0] == pod_name:
-                if not None in out:
-                    out[None] = BeneDict()
-                out[None][pod_name] = container_statuses[pod_name]
+            if 'containerStatuses' in pod.status: # Pod is created
+                container_statuses = self._parse_container_statuses(
+                                        pod.status.containerStatuses)
+                # test if the process is stand-alone
+                if len(container_statuses) == 1 and list(container_statuses.keys())[0] == pod_name:
+                    if not None in out:
+                        out[None] = OrderedDict()
+                    out[None][pod_name] = container_statuses[pod_name]
+                else:
+                    out[pod_name] = container_statuses
             else:
-                out[pod_name] = container_statuses
+                out[pod_name] = {'~': self._parse_unstarted_pod_statuses(pod.status)}
+        return out
+
+    def _parse_unstarted_pod_statuses(self, di):
+        out = OrderedDict([
+            ('Ready', '0'),
+            ('Restarts', '0'),
+            ('State', 'Pending')
+        ])
         return out
 
     def _parse_container_statuses(self, li):
-        out = {}
+        out = OrderedDict()
         for container_status in li:
             container_name = container_status.name
             state = list(container_status.state.keys())[0]
             state_info = container_status.state[state]
-            out[container_name] = BeneDict({
-                'Ready': str(int(container_status.ready)),
-                'Restarts': str(int(container_status.restartCount)),
-                'State': self._parse_container_state_info(state, state_info)
-            })
+            out[container_name] = OrderedDict([
+                ('Ready', str(int(container_status.ready))),
+                ('Restarts', str(int(container_status.restartCount))),
+                ('State', self._parse_container_state_info(state, state_info))
+            ])
         return out
 
     def _parse_container_state_info(self, state, state_info):

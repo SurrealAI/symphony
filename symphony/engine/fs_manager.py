@@ -1,6 +1,6 @@
-from symphony.core.application_config import SymphonyConfig
+from symphony.engine import SymphonyConfig
 from symphony.spec import ExperimentSpec
-from benedict.data_format import dump_yaml_string, load_yaml_file
+from benedict.data_format import dump_yaml_str, load_yaml_file
 from pathlib import Path
 from os.path import expanduser
 import os
@@ -29,11 +29,11 @@ class FSManager(object):
         return experiment
 
     def save_experiment(self, experiment):
-        assert isinstance(experiment, ExperimentConfig)
+        assert isinstance(experiment, ExperimentSpec)
         experiment_name = experiment.name
         experiment_file = self.experiment_file(experiment_name)
         di = experiment.dump_dict()
-        with experiment_file.open('wb') as f:
-            f.write(dump_yaml_string(di))
+        with experiment_file.open('w') as f:
+            f.write(dump_yaml_str(di))
         return str(experiment_file)
 

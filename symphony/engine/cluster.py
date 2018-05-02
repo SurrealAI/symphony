@@ -118,6 +118,7 @@ class Cluster(metaclass=_BackendRegistry):
                 'p3_lone': {'status': 'running'}
             }
         }
+        Note: Return ordered dict to make sure things appear in order
         """
         raise NotImplementedError
 

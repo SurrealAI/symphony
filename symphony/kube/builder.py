@@ -1,4 +1,4 @@
-from symphony.utils.common import merge_dict
+from symphony.utils.common import merge_dict, strip_repository_name
 from benedict import BeneDict
 import copy
 
@@ -177,6 +177,8 @@ class KubeContainerYML(KubeConfigYML):
         self.data.args = args
 
     def set_env(self, name, value):
+        name = str(name)
+        value = str(value)
         for entry in self.data['env']:
             if entry.name == name:
                 entry.value = value
