@@ -21,7 +21,7 @@ class KubeCluster(Cluster):
     def new_experiment(self, *args, **kwargs):
         return KubeExperimentSpec(*args, **kwargs)
 
-    def launch(self, experiment_spec):
+    def launch(self, experiment_spec, force=False):
         print('launching', experiment_spec.name)
         launch_plan = experiment_spec.compile()
 
@@ -29,7 +29,8 @@ class KubeCluster(Cluster):
             print(launch_plan)
         else:
             # TODO: some of them should be shared
-            self.set_experiment(experiment_spec.name)
+            if not force and self.fs.experiment_exists(experiment_spec.name):
+                raise ValueError('[Error] Experiment {} already exists'.format(experiment_spec.name))
             experiment_file = Path(self.fs.save_experiment(experiment_spec))
             experiment_folder = experiment_file.parent
             launch_plan_file = experiment_folder / 'kube.yml'
@@ -38,6 +39,7 @@ class KubeCluster(Cluster):
             #TODO: persist yaml file
             runner.run_verbose('kubectl create namespace ' + experiment_spec.name, dry_run=self.dry_run)
             runner.run_verbose('kubectl create -f "{}" --namespace {}'.format(launch_plan_file, experiment_spec.name), dry_run=self.dry_run)
+            self.set_experiment(experiment_spec.name)
 
     # ========================================================
     # ===================== Action API =======================

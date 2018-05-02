@@ -12,7 +12,7 @@ class _SymphonyConfigLoader(object):
             config_path = expanduser(os.environ['SYMPH_CONFIG_FILE'])
         else:
             config_path = expanduser(self.global_settings.default_config)
-        self.load_config(config_path)
+        self.load_config_file(config_path)
 
     def default_config(self):
         return  {   
@@ -59,14 +59,18 @@ class _SymphonyConfigLoader(object):
 
         self.global_settings = BeneDict(load_yaml_file(str(global_settings_path)))
 
-    def load_config(self, config_path):
+    def load_config_file(self, config_path):
         """
         Loads config specified by yaml file at config_path
         """
         if Path(expanduser(config_path)).exists():
             config = BeneDict(load_yaml_file(config_path))
+            self.load_config(config)
         else:
             raise ValueError('No symphony config file found at {}'.format(config_path))
+
+    def load_config(self, config):
+        config = BeneDict(config)
         self.cluster_name = config.cluster_name
         self.cluster_type = config.cluster_type
         self.cluster_args = config.cluster_args

@@ -52,10 +52,12 @@ class Cluster(metaclass=_BackendRegistry):
         """
         raise NotImplementedError
 
-    def launch(self, experiment_config):
+    def launch(self, experiment_config, force=False):
         """
         Launches an experiment specified by eperiment_config.
         Raises error if an experiment with the same name already exists
+        Args:
+            force: overwrites the experiment if it exists
         """
         raise NotImplementedError
 

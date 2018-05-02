@@ -16,6 +16,9 @@ class FSManager(object):
         experiment_path.mkdir(exist_ok=True, parents=True)
         return experiment_path
 
+    def experiment_exists(self, experiment_name):
+        return self.experiment_file(experiment_name).exists()
+
     def experiment_file(self, experiment_name):
         experiment_file = self.experiment_path(experiment_name) / 'experiment.yaml'
         return experiment_file
