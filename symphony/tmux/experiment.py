@@ -18,7 +18,7 @@ class TmuxExperimentSpec(ExperimentSpec):
         tmux_name_check(name, 'Experiment')
         super().__init__(name)
         self.start_dir = start_dir
-        if preamble_cmd and type(preamble_cmd) != list:
+        if not isinstance(preamble_cmd, (tuple, list)):
             self.preamble_cmd = [preamble_cmd]
         else:
             self.preamble_cmd = preamble_cmd
