@@ -92,8 +92,7 @@ class ExperimentSpec(BaseSpec):
     def get_process(self, name):
         return self.lone_processes[name]
 
-    # TODO: shall we make this list lone_processes
-    def list_processes(self):
+    def list_lone_processes(self):
         return self.lone_processes.values()
 
     def list_all_processes(self):

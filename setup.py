@@ -35,6 +35,7 @@ setup(
     ],
     install_requires=[
         "BeneDict>=0.3"
+        "libtmux",
     ],
     entry_points={
         'console_scripts': [
