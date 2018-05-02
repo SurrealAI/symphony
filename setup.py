@@ -34,7 +34,8 @@ setup(
         "Programming Language :: Python :: 3"
     ],
     install_requires=[
-        "BeneDict"
+        "BeneDict",
+        "libtmux",
     ],
     entry_points={
         'console_scripts': [
