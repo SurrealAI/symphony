@@ -41,11 +41,12 @@ def strip_repository_name(git_repo_url):
 def print_err(*args, **kwargs):
     print(*args, **kwargs, file=sys.stderr)
 
-def sanitize_name(name, verbose=True):
+def sanitize_name_kubernetes(name, verbose=True):
     """
-        Transform name to lowercase, replace ' ' and '_' to '-'
-        :param name
-        :param verbose
+        Transform name to lowercase, replace '.', ' ' and '_' to '-'
+    Args:
+        name: the name to be sanitized
+        verbose: print warning message when the name is replaced
     """
     sanitized_name = name
     sanitized_name = sanitized_name.lower()

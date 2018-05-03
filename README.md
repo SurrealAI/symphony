@@ -82,4 +82,11 @@ experiment-1
 * `symphony visit [exposed_service]` (`symphony vi`) opens a web browser to the exposed service (Use `--url-only` to only get the url).
 * Other convenient functionalities can be used for some clusters, (e.g. Kubernetes). `exec, ssh, scp`.
 
+# Config
+Symphony provides several optional convenience methods to help organize experiments. They are controlled by `SymphonyConfig` class. 
+* ``
+
+
+
+
 

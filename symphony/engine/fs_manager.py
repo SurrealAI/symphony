@@ -9,7 +9,14 @@ import pickle
 
 class FSManager(object):
     def __init__(self):
-        self.data_root = Path(expanduser(SymphonyConfig().data_path))
+        folder = SymphonyConfig().experiment_folder
+        if folder:
+            self.data_root = Path(expanduser(folder))
+        else:
+            self.data_root = None
+
+    def has_experiment_folder(self):
+        return (self.data_root is not None)
 
     def experiment_path(self, experiment_name):
         experiment_path = self.data_root / experiment_name

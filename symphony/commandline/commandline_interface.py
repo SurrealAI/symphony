@@ -1,24 +1,13 @@
 from symphony.engine import *
 from symphony.kube import *
-from symphony.utils.common import print_err, sanitize_name
+from symphony.utils.common import print_err
 import webbrowser
 import argparse
 import re
 import sys
 
 
-def sanitize_experiment_name(name):
-    """
-        Allows None through so that kubecluster will use default name instead
-        TODO: update when tmux is in the picture
-    """
-    if name is None:
-        return name
-    else:
-        return sanitize_name(name)
-
-
-class SymphonyCommandLine(object):
+class SymphonyParser(object):
     def __init__(self):
         """
         This class adds parsers to sub_parser
@@ -45,9 +34,10 @@ class SymphonyCommandLine(object):
         """
         creates the cluster to use for the experiment
         """
-        config = SymphonyConfig()
-        cluster = Cluster.new(config.cluster_type, **config.cluster_args)
-        return cluster
+        raise NotImplementedError("Any subclass of SymphonyParser must implement create_cluster(self)")
+        # config = SymphonyConfig()
+        # cluster = Cluster.new(config.cluster_type, **config.cluster_args)
+        # return cluster
 
     def setup(self):
         """
@@ -213,14 +203,12 @@ class SymphonyCommandLine(object):
         if positional and required:
             parser.add_argument(
                 'experiment_name',
-                type=sanitize_experiment_name,
                 nargs=None,
                 help=help_str
             )
         elif positional and not required:
             parser.add_argument(
                 'experiment_name',
-                type=sanitize_experiment_name,
                 nargs='?',
                 default=None,
                 help=help_str
@@ -229,7 +217,6 @@ class SymphonyCommandLine(object):
             parser.add_argument(
                 '-e', '--exp', '--experiment', '--experiment-name',
                 dest='experiment_name',
-                type=sanitize_experiment_name,
                 default=None,
                 help=help_str,
             )

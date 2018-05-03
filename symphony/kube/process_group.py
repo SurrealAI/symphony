@@ -1,4 +1,5 @@
 from symphony.spec import ProcessGroupSpec
+from symphony.utils.common import sanitize_name_kubernetes
 from .process import KubeProcessSpec
 from .builder import KubePodYML
 from benedict.data_format import load_yaml_str
@@ -8,6 +9,7 @@ class KubeProcessGroupSpec(ProcessGroupSpec):
     _ProcessClass = KubeProcessSpec
 
     def __init__(self, name):
+        name = sanitize_name_kubernetes(name)
         super().__init__(name)
         self.pod_yml = KubePodYML(self.name)
 

@@ -1,4 +1,5 @@
 from symphony.spec import ProcessSpec
+from symphony.utils.common import sanitize_name_kubernetes, print_err
 from .builder import KubeContainerYML, KubePodYML
 from benedict.data_format import load_yaml_str
 
@@ -6,6 +7,7 @@ from benedict.data_format import load_yaml_str
 class KubeProcessSpec(ProcessSpec):
     def __init__(self, name, *, container_image=None, standalone=True, 
                 command=None, args=None, **kwargs):
+        name = sanitize_name_kubernetes(name)
         super().__init__(name)
         self.container_image = container_image
         self.standalone = standalone
@@ -51,9 +53,15 @@ class KubeProcessSpec(ProcessSpec):
     ### Container level 
 
     def set_command(self, command):
+        if not isinstance(command, list):
+            print_err('[Warning] command {} for KubernetesProcess {} must be a list'.format(command, self.name))
+            command = [command]
         self.container_yml.set_command(command)
 
     def set_args(self, args):
+        if not isinstance(args, list):
+            print_err('[Warning] args {} for KubernetesProcess {} must be a list'.format(args, self.name))
+            args = [args]
         self.container_yml.set_args(args)
 
     def set_env(self, name, value):

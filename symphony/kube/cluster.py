@@ -14,32 +14,36 @@ _RESERVED_NS = ['default', 'kube-public', 'kube-system']
 
 
 class KubeCluster(Cluster):
-    def __init__(self, dry_run=False):
-        self.dry_run = dry_run
+    def __init__(self):
         self.fs = FSManager()
 
     def new_experiment(self, *args, **kwargs):
         return KubeExperimentSpec(*args, **kwargs)
 
-    def launch(self, experiment_spec, force=False):
+    def launch(self, experiment_spec, force=False, dry_run=False):
         print('launching', experiment_spec.name)
         launch_plan = experiment_spec.compile()
 
-        if self.dry_run:
+        if dry_run:
             print(launch_plan)
         else:
             # TODO: some of them should be shared
-            if not force and self.fs.experiment_exists(experiment_spec.name):
-                raise ValueError('[Error] Experiment {} already exists'.format(experiment_spec.name))
-            experiment_file = Path(self.fs.save_experiment(experiment_spec))
-            experiment_folder = experiment_file.parent
-            launch_plan_file = experiment_folder / 'kube.yml'
-            with launch_plan_file.open('w') as f:
-                f.write(launch_plan)
-            #TODO: persist yaml file
-            runner.run_verbose('kubectl create namespace ' + experiment_spec.name, dry_run=self.dry_run)
-            runner.run_verbose('kubectl create -f "{}" --namespace {}'.format(launch_plan_file, experiment_spec.name), dry_run=self.dry_run)
-            self.set_experiment(experiment_spec.name)
+            if self.fs.has_experiment_folder():
+                if not force and self.fs.experiment_exists(experiment_spec.name):
+                    raise ValueError('[Error] Experiment {} already exists'.format(experiment_spec.name))
+                experiment_file = Path(self.fs.save_experiment(experiment_spec))
+                experiment_folder = experiment_file.parent
+                launch_plan_file = experiment_folder / 'kube.yml'
+                with launch_plan_file.open('w') as f:
+                    f.write(launch_plan)
+                #TODO: persist yaml file
+                runner.run_verbose('kubectl create namespace ' + experiment_spec.name)
+                runner.run_verbose('kubectl create -f "{}" --namespace {}'.format(launch_plan_file, experiment_spec.name))
+                self.set_experiment(experiment_spec.name)
+            else:
+                runner.run_verbose('kubectl create namespace ' + experiment_spec.name)
+                runner.run_verbose('kubectl create -f - --namespace {}'.format(experiment_spec.name), stdin=launch_plan)
+                self.set_experiment(experiment_spec.name)
 
     # ========================================================
     # ===================== Action API =======================
@@ -51,8 +55,7 @@ class KubeCluster(Cluster):
         check_valid_dns(experiment_name)
         runner.run_verbose(
             'kubectl delete namespace {}'.format(experiment_name),
-            print_out=True, raise_on_error=False, dry_run=self.dry_run
-        )
+            print_out=True, raise_on_error=False)
 
     # def delete_batch(self, experiments):
 
@@ -65,7 +68,7 @@ class KubeCluster(Cluster):
         dest_filepath = self._format_scp_path(dest_process, dest_process_group, dest_path)
         cmd = 'kubectl cp {} {} {}'.format(src_filepath, dest_filepath, 
                                             self._get_ns_cmd(experiment_name))
-        runner.run_raw(cmd, print_cmd=True, dry_run=self.dry_run)
+        runner.run_raw(cmd, print_cmd=True)
 
     def _format_scp_path(self, pg, p, path):
         if p is None:
@@ -98,7 +101,7 @@ class KubeCluster(Cluster):
         else:
             pod_name, container_name = process_group_name, process_name
         return runner.run_raw('kubectl exec -ti {} -c {} {} -- {}'.format(pod_name, 
-                container_name, ns_cmd, command), dry_run=self.dry_run)
+                container_name, ns_cmd, command))
 
     # ========================================================
     # ===================== Query API ========================
@@ -254,9 +257,7 @@ class KubeCluster(Cluster):
                 since=since, tail=tail, namespace=experiment_name
             ),
             print_out=print_logs,
-            raise_on_error=True,
-            dry_run=self.dry_run
-        )
+            raise_on_error=True)
         if retcode != 0:
             return ''
         elif print_logs:
@@ -279,8 +280,7 @@ class KubeCluster(Cluster):
     def current_context(self):
         out, err, retcode = runner.run_verbose(
             'kubectl config current-context', print_out=False, 
-            raise_on_error=True, dry_run=self.dry_run
-        )
+            raise_on_error=True)
         return out
 
     def current_experiment(self):
@@ -289,8 +289,6 @@ class KubeCluster(Cluster):
         """
         config = self.config_view()
         current_context = self.current_context()
-        if self.dry_run:
-            return 'dummy-namespace'
         for context in config['contexts']:
             if context['name'] == current_context:
                 return context['context']['namespace']
@@ -304,9 +302,8 @@ class KubeCluster(Cluster):
         check_valid_dns(namespace)
         _, _, retcode = runner.run_verbose(
             'kubectl config set-context $(kubectl config current-context) --namespace={}'.format(namespace),
-            print_out=True, raise_on_error=False, dry_run=self.dry_run
-        )
-        if not self.dry_run and retcode == 0:
+            print_out=True, raise_on_error=False)
+        if retcode == 0:
             print('successfully switched to namespace `{}`'.format(namespace))
 
     def _get_selectors(self, labels, fields):
@@ -375,7 +372,7 @@ class KubeCluster(Cluster):
             prefix, arg = output_format.split('=', 1)
             output_format = prefix + '=' + shlex.quote(arg)
         cmd += ' -o ' + output_format
-        out, _, _ = runner.run_verbose(cmd, print_out=False, raise_on_error=True, dry_run=self.dry_run)
+        out, _, _ = runner.run_verbose(cmd, print_out=False, raise_on_error=True)
         if output_format == 'yaml':
             return load_yaml_str(out)
         elif output_format == 'json':
@@ -430,9 +427,7 @@ class KubeCluster(Cluster):
         Generates a yaml of context and cluster info
         """
         out, err, retcode = runner.run_verbose(
-            'kubectl config view', print_out=False, 
-            raise_on_error=True, dry_run=self.dry_run
-        )
+            'kubectl config view', print_out=False, raise_on_error=True)
         return BeneDict(load_yaml_str(out))
 
     def _get_ns_cmd(self, namespace):

@@ -52,12 +52,13 @@ class Cluster(metaclass=_BackendRegistry):
         """
         raise NotImplementedError
 
-    def launch(self, experiment_config, force=False):
+    def launch(self, experiment_config, force=False, dry_run=False):
         """
         Launches an experiment specified by eperiment_config.
         Raises error if an experiment with the same name already exists
         Args:
             force: overwrites the experiment if it exists
+            dry_run: only prints how processes are going to be run, do not actually run them
         """
         raise NotImplementedError
 

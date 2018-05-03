@@ -5,7 +5,7 @@ Order of spec: Cluster -> Experiment -> ProcessGroup -> Process
 from symphony.engine import *
 from symphony.kube import *
 
-cluster = Cluster.new('kube', dry_run=True)
+cluster = Cluster.new('kube')
 print(type(cluster))
 exp = cluster.new_experiment('exp')
 nonagent = exp.new_process_group('group')
@@ -16,11 +16,11 @@ replay.connects('myserver')
 
 agents = []
 for i in range(8):
-    agent = exp.new_process('agent' + str(i), container_image='gpu', args='--cmd')
+    agent = exp.new_process('agent' + str(i), container_image='gpu', args=['--cmd'])
     agent.connects('myserver')
     agents.append(agent)
 
-tb = exp.new_process('tb', container_image='tensorboard', args='--logdir')
+tb = exp.new_process('tb', container_image='tensorboard', args=['--logdir'])
 tb.exposes('tensorboard')
 
 # do some more kube specific things

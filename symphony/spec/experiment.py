@@ -10,7 +10,7 @@ class ExperimentSpec(BaseSpec):
     _ProcessGroupClass = None
 
     def __init__(self, name):
-        if SymphonyConfig().prefix_username and SymphonyConfig().username:
+        if SymphonyConfig().username:
             if name.find(SymphonyConfig().username) != 0:
                 name = SymphonyConfig().username + '-' + name
         super().__init__(name)

@@ -1,13 +1,11 @@
 """
 All experiments, processes, and process_groups extend from this base class
 """
-from symphony.utils.common import sanitize_name
 import benedict.data_format as df
 
 
 class BaseSpec:
     def __init__(self, name):
-        name = sanitize_name(name)
         self.name = name
 
     def dump_dict(self):

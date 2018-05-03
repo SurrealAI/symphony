@@ -2,7 +2,7 @@ from symphony.spec import ExperimentSpec
 from .process import KubeProcessSpec
 from .process_group import KubeProcessGroupSpec
 from .builder import KubeIntraClusterService, KubeCloudExternelService
-from symphony.utils.common import dump_yml
+from symphony.utils.common import dump_yml, sanitize_name_kubernetes
 from symphony.engine.address_book import AddressBookData
 import copy
 import itertools
@@ -13,6 +13,7 @@ class KubeExperimentSpec(ExperimentSpec):
     _ProcessGroupClass = KubeProcessGroupSpec
 
     def __init__(self, name, portrange=None):
+        name = sanitize_name_kubernetes(name)
         super().__init__(name)
         if portrange is None:
             portrange = list(range(7000,9000))
@@ -30,7 +31,6 @@ class KubeExperimentSpec(ExperimentSpec):
             components['exposed-service-' + k] = v.yml()
         for k, v in self.binded_services.items():
             components['binded-service-' + k] = v.yml()
-
     
         for process_group in self.list_process_groups():
             components['process-group-' + process_group.name] = process_group.yml()
