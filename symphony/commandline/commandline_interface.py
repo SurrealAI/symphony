@@ -32,10 +32,10 @@ class SymphonyCommandLine(object):
             dest='action'  # will store to parser.subcommand_name
         )
         self.subparsers.required = True
+        self._parsers_cache = {}
 
         self.cluster = self.create_cluster()
 
-        self._setup()
         self.setup()
 
     # ======================================================
@@ -50,12 +50,6 @@ class SymphonyCommandLine(object):
         return cluster
 
     def setup(self):
-        """
-        Add any more parsers, to be inherited by subclasses
-        """
-        pass 
-
-    def _setup(self):
         """
         Main function that returns the configured parser
         """
@@ -89,8 +83,12 @@ class SymphonyCommandLine(object):
             aliases=aliases,
             **kwargs
         )
+        self._parsers_cache[name] = parser
         parser.set_defaults(func=method_func)
         return parser
+
+    def get_subparser(self, name):
+        return self._parsers_cache[name]
 
     # ==================== Action API ====================
     def _setup_delete(self):
