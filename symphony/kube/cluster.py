@@ -51,7 +51,7 @@ class KubeCluster(Cluster):
         check_valid_dns(experiment_name)
         runner.run_verbose(
             'kubectl delete namespace {}'.format(experiment_name),
-            print_out=True, raise_on_error=False
+            print_out=True, raise_on_error=False, dry_run=self.dry_run
         )
 
     # def delete_batch(self, experiments):

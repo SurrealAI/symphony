@@ -6,6 +6,9 @@ from symphony.engine.application_config import SymphonyConfig
 
 
 class ExperimentSpec(BaseSpec):
+    _ProcessClass = None
+    _ProcessGroupClass = None
+
     def __init__(self, name):
         if SymphonyConfig().prefix_username and SymphonyConfig().username:
             if name.find(SymphonyConfig().username) != 0:
@@ -35,19 +38,11 @@ class ExperimentSpec(BaseSpec):
         Returns:
             new ProcessGroupSpec
         """
-        pg = self._new_process_group(*args, **kwargs)
+        if self._ProcessGroupClass is None:
+            raise NotImplementedError('please define class variable _ProcessGroupClass')
+        pg = self._ProcessGroupClass(*args, **kwargs)
         self.add_process_group(pg)
         return pg
-
-    def _new_process_group(self, *args, **kwargs):
-        raise NotImplementedError
-
-    @classmethod
-    def _process_group_class(cls):
-        """
-        Returns ProcessGroupSpec
-        """
-        raise NotImplementedError
 
     def get_process_group(self, name):
         return self.process_groups[name]
@@ -75,24 +70,14 @@ class ExperimentSpec(BaseSpec):
         Returns:
             new ProcessSpec
         """
-        p = self._new_process(*args, **kwargs)
+        p = self._ProcessClass(*args, **kwargs)
         self.add_process(p)
         return p
-
-    def _new_process(self, *args, **kwargs):
-        raise NotImplementedError
-
-    @classmethod
-    def _process_class(cls):
-        """
-        Returns ProcessSpec
-        """
-        raise NotImplementedError
 
     def get_process(self, name):
         return self.lone_processes[name]
 
-    def list_lone_processes(self):
+    def list_processes(self):
         return self.lone_processes.values()
 
     def list_all_processes(self):
@@ -108,10 +93,10 @@ class ExperimentSpec(BaseSpec):
     def _load_dict(self, di):
         pgs = di['process_groups']
         for dictionary in pgs:
-            self.add_process_group(self._process_group_class().load_dict(dictionary))
+            self.add_process_group(self._ProcessGroupClass.load_dict(dictionary))
         ps = di['processes']
         for dictionary in ps:
-            self.add_process(self._process_class().load_dict(dictionary))
+            self.add_process(self._ProcessClass.load_dict(dictionary))
 
     def dump_dict(self):
         pgs = []

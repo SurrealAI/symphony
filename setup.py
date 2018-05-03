@@ -14,18 +14,9 @@ setup(
     url='https://github.com/SurrealAI/symphony',
     description='a distributed process orchestration platform that supports both laptop and major cloud providers',
     # long_description=read('README.rst'),
-    # keywords=['Reinforcement Learning',
-    #           'Deep Learning',
-    #           'Distributed Computing'],
+    keywords=['Orchestration', 'Kubernetes', 'Tmux'],
     license='GPLv3',
     packages=['symphony'],
-    # entry_points={
-    #     'console_scripts': [
-    #         'git-snapshot=surreal.kube.git_snapshot:main',
-    #         'surreal-runner=surreal.main_scripts.runner:main',
-    #         'kurreal=surreal.kube.kurreal:main',
-    #     ]
-    # },
     classifiers=[
         "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",

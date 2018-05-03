@@ -3,12 +3,18 @@ from .process import ProcessSpec
 
 
 class ProcessGroupSpec(BaseSpec):
+    _ProcessClass = None
+
     def __init__(self, name):
         super().__init__(name)
         self.processes = {}
         self.parent_experiment = None
 
     def add_process(self, process):
+        """Inserts a process to this process group
+        Args: 
+            process(ProcessSpec): Process to be added
+        """
         assert isinstance(process, ProcessSpec)
         self.processes[process.name] = process
         process._set_process_group(self)
@@ -17,7 +23,7 @@ class ProcessGroupSpec(BaseSpec):
 
     def _set_experiment(self, experiment):
         """ Internal method
-            Set process to belong to experiment
+            Set process group to belong to experiment
         """
         if self.parent_experiment is not None:
             raise ValueError('[Error] Process group {} cannot be added to experiment {}. \
@@ -40,16 +46,11 @@ class ProcessGroupSpec(BaseSpec):
         Returns:
             new ProcessSpec
         """
-        p = self._new_process(*args, **kwargs)
+        if self._ProcessClass is None:
+            raise NotImplementedError('Please define class variable _ProcessClass')
+        p = self._ProcessClass(*args, **kwargs)
         self.add_process(p)
         return p
-
-    def _new_process(self, *args, **kwargs):
-        raise NotImplementedError
-
-    @classmethod
-    def _process_class(self):
-        raise NotImplementedError
 
     def list_processes(self):
         return self.processes.values()
@@ -63,13 +64,10 @@ class ProcessGroupSpec(BaseSpec):
     def _load_dict(self, di):
         ps = di['processes']
         for dictionary in ps:
-            self.add_process(self._process_class().load_dict(dictionary))
+            self.add_process(self._ProcessClass.load_dict(dictionary))
 
     def dump_dict(self):
         ps = []
         for process in self.list_processes():
             ps.append(process.dump_dict())
         return {'processes': ps, 'name': self.name}
-
-    
-

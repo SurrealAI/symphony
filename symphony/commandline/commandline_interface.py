@@ -19,25 +19,43 @@ def sanitize_experiment_name(name):
 
 
 class SymphonyCommandLine(object):
-    def __init__(self, subparsers):
+    def __init__(self):
         """
         This class adds parsers to sub_parser
         Args:
             sub_parser(generate by argparse.ArgumentParser().add_subparsers())
         """
-        subparsers.required = True
-        self._subparsers = subparsers
+        self.master_parser = argparse.ArgumentParser()
 
-        config = SymphonyConfig()
-        self.cluster = Cluster.new(config.cluster_type, **config.cluster_args)
-        self.claimed_commands = set()
+        self.subparsers = self.master_parser.add_subparsers(
+            help='action commands',
+            dest='action'  # will store to parser.subcommand_name
+        )
+        self.subparsers.required = True
 
+        self.cluster = self.create_cluster()
+
+        self._setup()
         self.setup()
 
     # ======================================================
     # ==================== Parser setup ====================
     # ======================================================
+    def create_cluster(self):
+        """
+        creates the cluster to use for the experiment
+        """
+        config = SymphonyConfig()
+        cluster = Cluster.new(config.cluster_type, **config.cluster_args)
+        return cluster
+
     def setup(self):
+        """
+        Add any more parsers, to be inherited by subclasses
+        """
+        pass 
+
+    def _setup(self):
         """
         Main function that returns the configured parser
         """
@@ -54,44 +72,49 @@ class SymphonyCommandLine(object):
         self._setup_log() #
         self._setup_visit() #
 
-    def _add_subparser(self, name, aliases, **kwargs):
-        self.claimed_commands.add(name)
-        for alias in aliases:
-            self.claimed_commands.add(alias)
-        method_name = 'symphony_' + name.replace('-', '_')
+    def add_subparser(self, name, aliases, **kwargs):
+        """ Add a subparser with name @name
+        Args:
+            name: The name of the sub parser. Method 'action_' + name will be called
+                  For example, if name is 'log', `symphony log` will invoke self.action_log(args)
+            aliases(list(str)): other names to invoke this command (e.g. ['l', 'logs'])
+            kwargs: kwargs to provide to subparsers.add_parser()
+        """
+        method_name = 'action_' + name.replace('-', '_')
         method_func = getattr(self, method_name)  # Symphony.symphony_create()
 
-        parser = self._subparsers.add_parser(
+        parser = self.subparsers.add_parser(
             name,
             help=method_func.__doc__,
             aliases=aliases,
             **kwargs
         )
-        self._add_dry_run(parser)
-        parser.set_defaults(symph_func=method_func)
+        parser.set_defaults(func=method_func)
         return parser
 
     # ==================== Action API ====================
     def _setup_delete(self):
-        parser = self._add_subparser('delete', aliases=['d'])
+        parser = self.add_subparser('delete', aliases=['d'])
         self._add_experiment_name(parser, required=False, positional=True)
         parser.add_argument(
             '-f', '--force',
             action='store_true',
             help='force delete, do not show confirmation message.'
         )
+        self.add_dry_run(parser)
 
     def _setup_delete_batch(self):
-        parser = self._add_subparser('delete-batch', aliases=['db'])
+        parser = self.add_subparser('delete-batch', aliases=['db'])
         parser.add_argument('experiment_name', type=str)
         parser.add_argument(
             '-f', '--force',
             action='store_true',
             help='force delete, do not show confirmation message.'
         )
+        self.add_dry_run(parser)
 
     def _setup_scp(self):
-        parser = self._add_subparser('scp', aliases=['cp'])
+        parser = self.add_subparser('scp', aliases=['cp'])
         parser.add_argument(
             'src_file',
             help='source file or folder. "[[<process_group>/]<process>]:/file/path" denotes remote.'
@@ -101,9 +124,10 @@ class SymphonyCommandLine(object):
             help='destination file or folder. "[[<process_group>/]<process>]:/file/path" denotes remote.'
         )
         self._add_experiment_name(parser, required=False, positional=True)
+        self.add_dry_run(parser)
 
     def _setup_ssh(self):
-        parser = self._add_subparser('ssh', aliases=[])
+        parser = self.add_subparser('ssh', aliases=[])
         self._add_component_arg(parser)
         self._add_experiment_name(parser, required=False, positional=True)
     
@@ -112,13 +136,13 @@ class SymphonyCommandLine(object):
         Actual exec commands must be added after "--"
         will throw error if no "--" in command args
         """
-        parser = self._add_subparser('exec', aliases=['x'])
+        parser = self.add_subparser('exec', aliases=['x'])
         self._add_component_arg(parser)
         self._add_experiment_name(parser, required=False, positional=True)
 
     # ==================== Query API ====================
     def _setup_log(self):
-        parser = self._add_subparser('log', aliases=['logs', 'l'])
+        parser = self.add_subparser('log', aliases=['logs', 'l'])
         self._add_component_arg(parser)
         self._add_experiment_name(parser, required=False, positional=True)
         parser.add_argument(
@@ -139,7 +163,7 @@ class SymphonyCommandLine(object):
         )
 
     def _setup_list_experiments(self):
-        parser = self._add_subparser(
+        parser = self.add_subparser(
             'list-experiments',
             aliases=['ls', 'exps', 'experiments']
         )
@@ -147,7 +171,7 @@ class SymphonyCommandLine(object):
         self._add_experiment_name(parser, required=False, positional=True)
     
     def _setup_experiment(self):
-        parser = self._add_subparser(
+        parser = self.add_subparser(
             'experiment',
             aliases=['exp']
         )
@@ -163,11 +187,11 @@ class SymphonyCommandLine(object):
         """
             same as 'symphony list pod'
         """
-        parser = self._add_subparser('process', aliases=['p', 'processes'])
+        parser = self.add_subparser('process', aliases=['p', 'processes'])
         self._add_experiment_name(parser, required=False, positional=True)
 
     def _setup_visit(self):
-        parser = self._add_subparser('visit', aliases=['vi'])
+        parser = self.add_subparser('visit', aliases=['vi'])
         parser.add_argument('service_name', help='the name of the service to visit')
         parser.add_argument(
             '-u', '--url-only',
@@ -177,11 +201,11 @@ class SymphonyCommandLine(object):
         self._add_experiment_name(parser, required=False, positional=True)
 
     # ==================== helpers ====================
-    def _add_dry_run(self, parser):
+    def add_dry_run(self, parser):
         parser.add_argument(
             '-dr', '--dry-run',
             action='store_true',
-            help='print the kubectl command without actually executing it.'
+            help='print the command without actually executing it.'
         )
 
     def _add_experiment_name(self, parser, required=True, positional=True):
@@ -258,7 +282,7 @@ class SymphonyCommandLine(object):
             raise IndexError('[Error] Must enter a number between 0 - {}'.format(len(matches)-1))
         return matches[ans]
 
-    def _symphony_delete(self, experiment_name, force, dry_run):
+    def _delete(self, experiment_name, force, dry_run):
         """
         Stop an experiment, delete corresponding pods, services, and namespace.
         If experiment_name is omitted, default to deleting the current namespace.
@@ -286,14 +310,14 @@ class SymphonyCommandLine(object):
         cluster.delete(experiment_name=to_delete)
         print('deleting all resources under experiment "{}"'.format(to_delete))
 
-    def symphony_delete(self, args):
+    def action_delete(self, args):
         """
         Stop an experiment, delete corresponding pods, services, and namespace.
         If experiment_name is omitted, default to deleting the current namespace.
         """
-        self._symphony_delete(args.experiment_name, args.force, args.dry_run)
+        self._delete(args.experiment_name, args.force, args.dry_run)
 
-    def symphony_delete_batch(self, args):
+    def action_delete_batch(self, args):
         """
         Stop an experiment, delete corresponding pods, services, and namespace.
         If experiment_name is omitted, default to deleting the current namespace.
@@ -304,7 +328,7 @@ class SymphonyCommandLine(object):
             if re.match(args.experiment_name, experiment):
                 self._symphony_delete(experiment, args.force, args.dry_run)
 
-    def symphony_list_experiments(self, args):
+    def action_list_experiments(self, args):
         """
         `symphony ls`: list all experiments
         aliases `symphony exps`, `symphony experiments`
@@ -312,7 +336,7 @@ class SymphonyCommandLine(object):
         for exp in self.cluster.list_experiments():
             print(exp)
 
-    def symphony_experiment(self, args):
+    def action_experiment(self, args):
         """
         `symphony exp`: show the current experiment
         `symphony exp <namespace>`: switch context to another experiment
@@ -341,7 +365,7 @@ class SymphonyCommandLine(object):
             sys.exit(1)
         return name
 
-    def symphony_process(self, args):
+    def action_process(self, args):
         """
             same as 'symphony list pod'
         """
@@ -385,7 +409,7 @@ class SymphonyCommandLine(object):
             rows.append(row_format.format(*row_data))
         return '\n'.join(rows)
 
-    def symphony_log(self, args):
+    def action_log(self, args):
         """
         Show logs of components:
         """
@@ -401,7 +425,7 @@ class SymphonyCommandLine(object):
             print_logs=True
         )
 
-    def symphony_exec(self, args):
+    def action_exec(self, args):
         """
         Exec command on a component:
         kubectl exec -ti <component> -- <command>
@@ -422,7 +446,7 @@ class SymphonyCommandLine(object):
             experiment_name=self._get_experiment(args)
         )
 
-    def symphony_scp(self, args):
+    def action_scp(self, args):
         """
         https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#cp
         symphony cp /my/local/file learner:/remote/file mynamespace
@@ -439,7 +463,7 @@ class SymphonyCommandLine(object):
                                     dest_process=dest_p, 
                                     dest_process_group=dest_pg)
 
-    def symphony_ssh(self, args):
+    def action_ssh(self, args):
         """
         Interactive /bin/bash into the pod
         kubectl exec -ti <component> -- /bin/bash
@@ -448,7 +472,7 @@ class SymphonyCommandLine(object):
         pg, p = self._separate_component_path(args.component_name, exp)
         self.cluster.login(experiment_name=exp, process_name=p, process_group_name=pg)
 
-    def symphony_visit(self, args):
+    def action_visit(self, args):
         url = self.cluster.external_url(self._get_experiment(args), args.service_name)
         if url:
             url = 'http://' + url
@@ -497,67 +521,24 @@ class SymphonyCommandLine(object):
         else:
             return None, None, f
 
-def create_symphony_parser():
-    """
-    Creates a master parser with sub_parsers
-    Returns:
-        master_parser(argparse.ArgumentParser())
-        subparsers(master_parser.add_subparsers(help='action commands',dest='action'))
-        claimed_commands(set(string)): commands used by symphony
-    """
-    master_parser = argparse.ArgumentParser()
+    # =============================================================
+    # ========================= Main ==============================
+    # =============================================================
+    def main(self):
+        assert sys.argv.count('--') <= 1, \
+            'command line can only have at most one "--"'
+        if '--' in sys.argv:
+            idx = sys.argv.index('--')
+            remainder = sys.argv[idx+1:]
+            sys.argv = sys.argv[:idx]
+            has_remainder = True  # even if remainder itself is empty
+        else:
+            remainder = []
+            has_remainder = False
 
-    subparsers = master_parser.add_subparsers(
-        help='action commands',
-        dest='action'  # will store to parser.subcommand_name
-    )
-    symph_cmd = SymphonyCommandLine(subparsers)
-    return master_parser, subparsers, symph_cmd.claimed_commands
+        args = self.master_parser.parse_args()
+        args.remainder = remainder
+        args.has_remainder = has_remainder
 
-def add_symphony_parser(subparsers):
-    """
-    Takes add symphony command to subparsers
-    Args:
-        subparsers: subparsers that symphony adds commands to
-    Returns:
-        claimed_commands(set(string)): commands used by symphony
-    """
-    symph_cmd = SymphonyCommandLine(subparsers)
-    return symph_cmd.claimed_commands
+        args.func(args)
 
-def symph_parse_args(parser, argv=None):
-    """
-    Truncates argv by removing everything after '--'.
-    Args:
-        argv(list(str))
-    """
-    if argv is None:
-        argv = sys.argv[1:]
-    assert argv.count('--') <= 1, \
-        'command line can only have at most one "--"'
-    if '--' in argv:
-        idx = argv.index('--')
-        remainder = argv[idx+1:]
-        argv = argv[:idx]
-        has_remainder = True  # even if remainder itself is empty
-    else:
-        remainder = []
-        has_remainder = False
-
-    args = parser.parse_args(argv)
-    args.remainder = remainder
-    args.has_remainder = has_remainder
-
-    return args, argv
-
-def symph_exec_args(args):
-    """
-    If the command is symphony related, execute the command and return True
-    Otherwise, return False
-    This is done by reading symph_func field of the namespace
-    """
-    if 'symph_func' in args:
-        args.symph_func(args)
-        return True
-    return False
-    return argv, has_remainder, remainder

@@ -50,16 +50,35 @@ class ProcessSpec(BaseSpec):
         if isinstance(spec, dict):
             for x in spec:
                 check_valid_dns(x)
+                if not isinstance(spec[x], int):
+                    raise ValueError('[Error] Invalid port number {}, expected int'.format(spec[x]))
             return spec
 
     # TODO: docs about bind/connect/expose input format
     def binds(self, spec):
+        """ Declare that this process binds to an address / provides a service
+        so others can connect to it
+        Args:
+        spec(str/list(str)/dict(str: int)): specify the services to provide:
+
+        """
         self.binded_services.update(self.parse_spec(spec))
 
     def connects(self, spec):
-        self.connected_services.update(self.parse_spec(spec))
+        """ Declare that this process connects to an address / an service
+        Args:
+        """
+        spec = self.parse_spec(spec)
+        for k in spec:
+            if spec[k] is not None:
+                raise ValueError('[Error] When connecting to {}, a port is specified. Port must be None when connecting'.format(k))
+        self.connected_services.update(spec)
 
     def exposes(self, spec):
+        """ Declare that this process binds to an address / provides a service
+        so user can connect to it externally, i.e. use `symphony visit <service_name>`
+        Args:
+        """
         self.exposed_services.update(self.parse_spec(spec))
 
     @classmethod

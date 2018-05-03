@@ -9,6 +9,9 @@ import itertools
 
 
 class KubeExperimentSpec(ExperimentSpec):
+    _ProcessClass = KubeProcessSpec
+    _ProcessGroupClass = KubeProcessGroupSpec
+
     def __init__(self, name, portrange=None):
         super().__init__(name)
         if portrange is None:
@@ -16,19 +19,6 @@ class KubeExperimentSpec(ExperimentSpec):
         self.portrange = portrange
         self.binded_services = {}
         self.exposed_services = {}
-
-    def _new_process(self, *args, **kwargs):
-        kwargs['standalone'] = True
-        return KubeProcessSpec(*args, **kwargs)
-
-    def _new_process_group(self, *args, **kwargs):
-        return KubeProcessGroupSpec(*args, **kwargs)
-
-    def _process_group_class(cls):
-        return KubeProcessGroupSpec
-
-    def _process_class(cls):
-        return KubeProcessSpec
 
     def _compile(self):
         self.declare_services()

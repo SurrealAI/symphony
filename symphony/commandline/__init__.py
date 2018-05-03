@@ -1,1 +1,1 @@
-from .commandline_interface import *
+from .commandline_interface import SymphonyCommandLine

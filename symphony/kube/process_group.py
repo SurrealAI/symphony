@@ -5,16 +5,19 @@ from benedict.data_format import load_yaml_str
 
 
 class KubeProcessGroupSpec(ProcessGroupSpec):
+    _ProcessClass = KubeProcessSpec
+
     def __init__(self, name):
         super().__init__(name)
         self.pod_yml = KubePodYML(self.name)
 
-    def _new_process(self, *args, **kwargs):
+    def new_process(self, *args, **kwargs):
+        if self._ProcessClass is None:
+            raise NotImplementedError('Please define class variable _ProcessClass')
         kwargs['standalone'] = False
-        return KubeProcessSpec(*args, **kwargs)
-
-    def _process_class(cls):
-        return KubeProcessSpec
+        p = self._ProcessClass(*args, **kwargs)
+        self.add_process(p)
+        return p
 
     def _load_dict(self, di):
         self.pod_yml = KubePodYML.load(di['pod_yml'])
