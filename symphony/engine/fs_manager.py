@@ -7,7 +7,7 @@ import os
 import pickle
 
 
-class FSManager(object):
+class LocalFileManager(object): # TODO: rename LocalFileManager
     def __init__(self):
         folder = SymphonyConfig().experiment_folder
         if folder:

@@ -1,4 +1,4 @@
-from symphony.engine import Cluster, FSManager
+from symphony.engine import Cluster, LocalFileManager
 from symphony.utils.common import check_valid_dns, is_sequence
 import symphony.utils.runner as runner
 from .experiment import KubeExperimentSpec
@@ -15,7 +15,7 @@ _RESERVED_NS = ['default', 'kube-public', 'kube-system']
 
 class KubeCluster(Cluster):
     def __init__(self):
-        self.fs = FSManager()
+        self.fs = LocalFileManager()
 
     def new_experiment(self, *args, **kwargs):
         return KubeExperimentSpec(*args, **kwargs)
