@@ -25,7 +25,7 @@ setup(
         "Programming Language :: Python :: 3"
     ],
     install_requires=[
-        "BeneDict>=0.3"
+        "BeneDict>=0.3",
         "libtmux",
     ],
     entry_points={

@@ -1,6 +1,6 @@
 
 
-class AddressBookData(object):
+class AddressBook(object):
     def __init__(self):
         self.entries = {}
 
@@ -24,3 +24,4 @@ class AddressBookData(object):
         formatted_name = formatted_name.replace('-', '_')
         return formatted_name
 
+    # Add serialize3

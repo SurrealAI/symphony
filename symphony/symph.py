@@ -146,4 +146,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    # SymphonyConfig().set_config({'save_path': })

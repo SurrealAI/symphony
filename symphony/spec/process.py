@@ -59,8 +59,7 @@ class ProcessSpec(BaseSpec):
         """ Declare that this process binds to an address / provides a service
         so others can connect to it
         Args:
-        spec(str/list(str)/dict(str: int)): specify the services to provide:
-
+        spec(str/list(str)/dict(str: int)): specify the services to provide
         """
         self.binded_services.update(self.parse_spec(spec))
 
