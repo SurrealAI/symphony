@@ -7,7 +7,7 @@ from symphony.kube import *
 import json
 import unittest
 
-class SerializationTest(unittest.TestCase):
+class SerializationTest:
     """docstring for SerializationTest"""
     
     exp = KubeExperimentSpec('exp')
@@ -17,11 +17,11 @@ class SerializationTest(unittest.TestCase):
     replay = nonagent.new_process('proc2')
     replay.connects('myserver')
 
-    # agents = []
-    # for i in range(8):
-    #     agent = exp.new_process('agent' + str(i))
-    #     agent.connects('myserver')
-    #     agents.append(agent)
+    agents = []
+    for i in range(8):
+        agent = exp.new_process('agent' + str(i))
+        agent.connects('myserver')
+        agents.append(agent)
 
     tb = exp.new_process('tb')
     tb.exposes('tensorboard')
@@ -35,13 +35,16 @@ class SerializationTest(unittest.TestCase):
 
     experiment = KubeExperimentSpec.load_dict(di)
     # print(experiment)
+    # 
+    def test_addressbook(self):
+        e1 = self.exp
+        assert exp.ab.entries == di['ab']
 
-    def test(self):
+    def test_correct(self):
         self.maxDiff = None
         e1 = self.exp._compile()
         e2 = self.experiment._compile()
-        k = 'process-group-group'
-        self.assertDictEqual(e1, e2)
+        assert e1 == e2
 
 if __name__ == '__main__':
     unittest.main()

@@ -5,7 +5,7 @@ Order of spec: Cluster -> Experiment -> ProcessGroup -> Process
 from symphony.engine import *
 from symphony.kube import *
 
-cluster = Cluster.new('kube', dry_run=True)
+cluster = Cluster.new('kube')
 print(type(cluster))
 exp = cluster.new_experiment('exp')
 nonagent = exp.new_process_group('group')
@@ -40,4 +40,4 @@ nonagent.add_toleration(key='surreal', operator='Exists', effect='NoExecute')
 
 nonagent.image_pull_policy('Always')
 
-cluster.launch(exp)
+cluster.launch(exp, dry_run=True)

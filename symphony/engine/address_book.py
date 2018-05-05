@@ -1,8 +1,10 @@
 
 
 class AddressBook(object):
-    def __init__(self):
+    def __init__(self, di=None):
         self.entries = {}
+        if di is not None:
+            self.entries = di
 
     def add_entry(self, name, host, port):
         entry = self.entries.get(name, {})

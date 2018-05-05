@@ -2,6 +2,7 @@ from .base import BaseSpec
 from .process import ProcessSpec
 from .process_group import ProcessGroupSpec
 from symphony.engine.application_config import SymphonyConfig
+from symphony.engine.address_book import AddressBook
 # from symphony.utils.common import 
 
 
@@ -14,6 +15,7 @@ class ExperimentSpec(BaseSpec):
             if name.find(SymphonyConfig().username) != 0:
                 name = SymphonyConfig().username + '-' + name
         super().__init__(name)
+        self.ab = AddressBook()
         self.lone_processes = {}
         self.all_processes = {}
         self.process_groups = {}
@@ -97,6 +99,7 @@ class ExperimentSpec(BaseSpec):
         ps = di['processes']
         for dictionary in ps:
             self.add_process(self._ProcessClass.load_dict(dictionary))
+        self.ab = AddressBook(di['ab'])
 
     def dump_dict(self):
         pgs = []
@@ -105,4 +108,4 @@ class ExperimentSpec(BaseSpec):
         ps = []
         for process in self.list_processes():
             ps.append(process.dump_dict())
-        return {'process_groups': pgs, 'processes': ps, 'name': self.name}
+        return {'process_groups': pgs, 'processes': ps, 'name': self.name, 'ab': self.ab.entries}

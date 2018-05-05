@@ -7,7 +7,7 @@ import os
 import pickle
 
 
-class LocalFileManager(object): # TODO: rename LocalFileManager
+class LocalFileManager:
     def __init__(self):
         folder = SymphonyConfig().experiment_folder
         if folder:
@@ -28,10 +28,10 @@ class LocalFileManager(object): # TODO: rename LocalFileManager
 
     def experiment_file(self, experiment_name):
         experiment_file = self.experiment_path(experiment_name) / 'experiment.yaml'
-        return experiment_file
+        return str(experiment_file)
 
     def load_experiment(self, experiment_name):
-        experiment_file = self.experiment_file(experiment_name)
+        experiment_file = Path(self.experiment_file(experiment_name))
         if experiment_file.exists():
             experiment = ExperimentSpec.load_dict(load_yaml_file(str(experiment_file)))
         else:
@@ -41,7 +41,7 @@ class LocalFileManager(object): # TODO: rename LocalFileManager
     def save_experiment(self, experiment):
         assert isinstance(experiment, ExperimentSpec)
         experiment_name = experiment.name
-        experiment_file = self.experiment_file(experiment_name)
+        experiment_file = Path(self.experiment_file(experiment_name))
         di = experiment.dump_dict()
         with experiment_file.open('w') as f:
             f.write(dump_yaml_str(di))

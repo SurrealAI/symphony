@@ -1,9 +1,9 @@
 from symphony.spec import ExperimentSpec
+from symphony.engine.address_book import AddressBook
 from .process import KubeProcessSpec
 from .process_group import KubeProcessGroupSpec
 from .builder import KubeIntraClusterService, KubeCloudExternelService
 from symphony.utils.common import dump_yml, sanitize_name_kubernetes
-from symphony.engine.address_book import AddressBook
 import copy
 import itertools
 
@@ -22,6 +22,8 @@ class KubeExperimentSpec(ExperimentSpec):
         self.exposed_services = {}
 
     def _compile(self):
+        self.ab = AddressBook()
+        
         self.declare_services()
         self.assign_addresses()
 
@@ -45,14 +47,13 @@ class KubeExperimentSpec(ExperimentSpec):
 
     def assign_addresses(self):
         # TODO: put into base class
-        ab_data = AddressBook()
         for exposed_service_name in self.exposed_services:
             exposed_service = self.exposed_services[exposed_service_name]
-            ab_data.add_entry(exposed_service.name, exposed_service_name, exposed_service.port)
+            self.ab.add_entry(exposed_service.name, exposed_service_name, exposed_service.port)
         for binded_service_name in self.binded_services:
             binded_service = self.binded_services[binded_service_name]
-            ab_data.add_entry(binded_service_name, binded_service_name, binded_service.port)
-        env_dict = ab_data.dump()
+            self.ab.add_entry(binded_service_name, binded_service_name, binded_service.port)
+        env_dict = self.ab.dump()
         # Stop here
         for process in self.list_all_processes():
             process.set_envs(env_dict)
