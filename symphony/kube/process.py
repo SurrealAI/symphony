@@ -1,12 +1,11 @@
 from symphony.spec import ProcessSpec
 from symphony.utils.common import sanitize_name_kubernetes, print_err
 from .builder import KubeContainerYML, KubePodYML
-from benedict.data_format import load_yaml_str
 
 
 class KubeProcessSpec(ProcessSpec):
-    def __init__(self, name, *, container_image=None, standalone=True, 
-                command=None, args=None, **kwargs):
+    def __init__(self, name, *, container_image=None, standalone=True,
+                 command=None, args=None, **kwargs):
         name = sanitize_name_kubernetes(name)
         super().__init__(name)
         self.container_image = container_image
@@ -25,7 +24,7 @@ class KubeProcessSpec(ProcessSpec):
             raise ValueError('Stand-alone process {} cannot be added to a process group {}'.format(self.name, process_group.name))
         super()._set_process_group(process_group)
         process_group.pod_yml.add_container(self.container_yml)
-    
+
     def _load_dict(self, di):
         super()._load_dict(di)
         self.container_image = di['container_image']
@@ -50,7 +49,7 @@ class KubeProcessSpec(ProcessSpec):
         assert self.standalone, 'Yml for process {} should be configured at process group level'.format(self.name)
         return self.pod_yml.yml()
 
-    ### Container level 
+    ### Container level
 
     def set_command(self, command):
         if not isinstance(command, list):

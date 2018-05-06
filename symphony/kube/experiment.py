@@ -45,7 +45,6 @@ class KubeExperimentSpec(ExperimentSpec):
         return ''.join(['---\n' + x for x in components.values()])
 
     def assign_addresses(self):
-        # TODO: put into base class
         for exposed_service_name in self.exposed_services:
             exposed_service = self.exposed_services[exposed_service_name]
             self.address_book.add_entry(exposed_service.name, exposed_service_name, exposed_service.port)
@@ -53,7 +52,6 @@ class KubeExperimentSpec(ExperimentSpec):
             binded_service = self.binded_services[binded_service_name]
             self.address_book.add_entry(binded_service_name, binded_service_name, binded_service.port)
         env_dict = self.address_book.dump()
-        # Stop here
         for process in self.list_all_processes():
             process.set_envs(env_dict)
 
@@ -94,7 +92,17 @@ class KubeExperimentSpec(ExperimentSpec):
                 port = self.get_port(portrange)
             service = KubeIntraClusterService(binded_service_name, port)
             self.binded_services[service.name] = service
-        # TODO: check connect
+        self.validate_connect()
+
+    def validate_connect(self):
+        """
+        Check if all connected services are correctly provided
+        """
+        for process in self.list_all_processes():
+            for connected_service_name in process.connected_services:
+                if connected_service_name not in self.binded_services:
+                    raise ValueError('Service {} is connected by process {} but not binded' \
+                                     .format(connected_service_name, process.name))
 
     def get_port(self, portrange):
         if len(portrange) == 0:
@@ -120,7 +128,7 @@ def compact_range_dumps(li):
     low = None
     high = None
     collections = []
-    for i in range(len(li)):
+    for i,number in enumerate(li):
         number = li[i]
         if low is None:
             low = number

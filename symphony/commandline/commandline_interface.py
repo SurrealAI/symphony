@@ -1,10 +1,8 @@
-from symphony.engine import *
-from symphony.kube import *
-from symphony.utils.common import print_err
 import webbrowser
 import argparse
 import re
 import sys
+from symphony.utils.common import print_err
 
 
 class SymphonyParser(object):
@@ -45,14 +43,14 @@ class SymphonyParser(object):
         """
         # Action api
         self._setup_delete() #
-        self._setup_delete_batch() # 
+        self._setup_delete_batch() #
         self._setup_scp() #
-        self._setup_ssh() # 
+        self._setup_ssh() #
         self._setup_exec() #
         # Query api
         self._setup_list_experiments() #
         self._setup_experiment() #
-        self._setup_process() # 
+        self._setup_process() #
         self._setup_log() #
         self._setup_visit() #
 
@@ -118,7 +116,7 @@ class SymphonyParser(object):
         parser = self.add_subparser('ssh', aliases=[])
         self._add_component_arg(parser)
         self._add_experiment_name(parser, required=False, positional=True)
-    
+
     def _setup_exec(self):
         """
         Actual exec commands must be added after "--"
@@ -157,7 +155,7 @@ class SymphonyParser(object):
         )
         # no arg to get the current namespace
         self._add_experiment_name(parser, required=False, positional=True)
-    
+
     def _setup_experiment(self):
         parser = self.add_subparser(
             'experiment',
@@ -170,7 +168,7 @@ class SymphonyParser(object):
         )
         # no arg to get the current namespace
         self._add_experiment_name(parser, required=False, positional=True)
-    
+
     def _setup_process(self):
         """
             same as 'symphony list pod'
@@ -230,7 +228,7 @@ class SymphonyParser(object):
     # ===============================================================
     # ==================== Commandline functions ====================
     # ===============================================================
-    def _interactive_find_exp(self, name, max_matches=10):
+    def _interactive_find_exp(self, name):
         """
         Find partial match of namespace, ask user to verify before switching to
         ns or delete experiment.
@@ -311,9 +309,9 @@ class SymphonyParser(object):
         experiments = self.cluster.list_experiments()
         for experiment in experiments:
             if re.match(args.experiment_name, experiment):
-                self._symphony_delete(experiment, args.force, args.dry_run)
+                self._delete(experiment, args.force, args.dry_run)
 
-    def action_list_experiments(self, args):
+    def action_list_experiments(self, _):
         """
         `symphony ls`: list all experiments
         aliases `symphony exps`, `symphony experiments`
@@ -358,7 +356,7 @@ class SymphonyParser(object):
         data = self.cluster.describe_experiment(name)
         output = self._print_experiment(data)
         print(output)
-        
+
     def _print_experiment(self, data, min_width=5, max_width=1000, pad=2):
         if len(data) == 0:
             return ''
@@ -383,7 +381,7 @@ class SymphonyParser(object):
                 counter += 1
         width = {}
         for key in columns:
-            w = max([len(x) for x in columns[key]] + [len(key)]) + 2
+            w = max([len(x) for x in columns[key]] + [len(key)]) + pad
             w = max(w, min_width)
             w = min(w, max_width)
             width[key] = w
@@ -425,7 +423,7 @@ class SymphonyParser(object):
             )
         commands = args.remainder
         self.cluster.exec_command(
-            process_name=args.component_name,
+            process_name=process_name,
             process_group_name=process_group_name,
             command=commands,
             experiment_name=self._get_experiment(args)
@@ -443,10 +441,10 @@ class SymphonyParser(object):
         dest_p, dest_pg, dest_path = self._format_scp_path(args.dest_file, exp)
         assert (src_p is None) != (dest_p is None), \
             '[Error] one of "src_file" and "dest_file" must be remote and the other local.'
-        self.cluster.transfer_file(exp, src_path, dest_path, src_process=src_p, 
-                                    src_process_group=src_pg, 
-                                    dest_process=dest_p, 
-                                    dest_process_group=dest_pg)
+        self.cluster.transfer_file(exp, src_path, dest_path, src_process=src_p,
+                                   src_process_group=src_pg,
+                                   dest_process=dest_p,
+                                   dest_process_group=dest_pg)
 
     def action_ssh(self, args):
         """
@@ -526,4 +524,3 @@ class SymphonyParser(object):
         args.has_remainder = has_remainder
 
         args.func(args)
-

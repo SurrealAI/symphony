@@ -43,7 +43,7 @@ def _print_err_return(out, err, retcode):
     print_err(out)
     print_err('*' * 46)
 
-def run_verbose(cmd,print_out=True,raise_on_error=False,dry_run=False,stdin=''):
+def run_verbose(cmd, print_out=True, raise_on_error=False, dry_run=False, stdin=''):
     out, err, retcode = run(cmd, dry_run=dry_run, stdin=stdin)
     if retcode != 0:
         _print_err_return(out, err, retcode)
@@ -55,4 +55,3 @@ def run_verbose(cmd,print_out=True,raise_on_error=False,dry_run=False,stdin=''):
     elif out and print_out:
         print(out)
     return out, err, retcode
-

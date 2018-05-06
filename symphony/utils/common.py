@@ -6,7 +6,6 @@ from collections import OrderedDict
 import yaml
 
 
-
 def merge_dict(d, u):
     for k, v in u.items():
         if isinstance(v, collections.Mapping):
