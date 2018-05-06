@@ -1,10 +1,9 @@
-from symphony.engine import SymphonyConfig
-from symphony.spec import ExperimentSpec
-from benedict.data_format import dump_yaml_str, load_yaml_file
 from pathlib import Path
 from os.path import expanduser
 import os
-import pickle
+from symphony.engine import SymphonyConfig
+from symphony.spec import ExperimentSpec
+from benedict.data_format import dump_yaml_str, load_yaml_file
 
 
 class LocalFileManager:
@@ -16,7 +15,7 @@ class LocalFileManager:
             self.data_root = None
 
     def has_experiment_folder(self):
-        return (self.data_root is not None)
+        return self.data_root is not None
 
     def experiment_path(self, experiment_name):
         experiment_path = self.data_root / experiment_name
@@ -24,7 +23,7 @@ class LocalFileManager:
         return experiment_path
 
     def experiment_exists(self, experiment_name):
-        return self.experiment_file(experiment_name).exists()
+        return Path(self.experiment_file(experiment_name)).exists()
 
     def experiment_file(self, experiment_name):
         experiment_file = self.experiment_path(experiment_name) / 'experiment.yaml'
@@ -46,4 +45,3 @@ class LocalFileManager:
         with experiment_file.open('w') as f:
             f.write(dump_yaml_str(di))
         return str(experiment_file)
-

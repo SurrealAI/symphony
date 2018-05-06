@@ -1,13 +1,15 @@
-from symphony.engine import Cluster, LocalFileManager
-from symphony.utils.common import check_valid_dns, is_sequence
-import symphony.utils.runner as runner
-from .experiment import KubeExperimentSpec
-from benedict.data_format import load_yaml_str, load_json_str, dump_yaml_file
-from benedict import BeneDict
+import shlex
 from datetime import datetime
 from pathlib import Path
 from collections import OrderedDict
-import shlex
+from benedict import BeneDict
+from benedict.data_format import load_yaml_str, load_json_str
+from symphony.engine import Cluster
+from symphony.ext import LocalFileManager
+from symphony.utils.common import check_valid_dns, is_sequence
+import symphony.utils.runner as runner
+from .experiment import KubeExperimentSpec
+
 
 
 _RESERVED_NS = ['default', 'kube-public', 'kube-system']
@@ -15,6 +17,7 @@ _RESERVED_NS = ['default', 'kube-public', 'kube-system']
 
 class KubeCluster(Cluster):
     def __init__(self):
+        super().__init__()
         self.fs = LocalFileManager()
 
     def new_experiment(self, *args, **kwargs):
@@ -47,7 +50,7 @@ class KubeCluster(Cluster):
 
     # ========================================================
     # ===================== Action API =======================
-    # ========================================================    
+    # ========================================================
 
     def delete(self, experiment_name):
         assert experiment_name not in _RESERVED_NS, \
@@ -59,15 +62,16 @@ class KubeCluster(Cluster):
 
     # def delete_batch(self, experiments):
 
-    def transfer_file(self, experiment_name, src_path, dest_path, src_process=None, src_process_group=None, 
-                    dest_process=None, dest_process_group=None):
+    def transfer_file(self, experiment_name, src_path, dest_path,
+                      src_process=None, src_process_group=None,
+                      dest_process=None, dest_process_group=None):
         """
         scp for remote backends:
         """
         src_filepath = self._format_scp_path(src_process, src_process_group, src_path)
         dest_filepath = self._format_scp_path(dest_process, dest_process_group, dest_path)
-        cmd = 'kubectl cp {} {} {}'.format(src_filepath, dest_filepath, 
-                                            self._get_ns_cmd(experiment_name))
+        cmd = 'kubectl cp {} {} {}'.format(src_filepath, dest_filepath,
+                                           self._get_ns_cmd(experiment_name))
         runner.run_raw(cmd, print_cmd=True)
 
     def _format_scp_path(self, pg, p, path):
@@ -88,8 +92,8 @@ class KubeCluster(Cluster):
         """
         kubectl exec -ti
 
-        Args: 
-        
+        Args:
+
         Returns:
             stdout string if is_print else None
         """
@@ -100,8 +104,8 @@ class KubeCluster(Cluster):
             pod_name, container_name = process_name, process_name
         else:
             pod_name, container_name = process_group_name, process_name
-        return runner.run_raw('kubectl exec -ti {} -c {} {} -- {}'.format(pod_name, 
-                container_name, ns_cmd, command))
+        return runner.run_raw('kubectl exec -ti {} -c {} {} -- {}'.format(pod_name,
+                              container_name, ns_cmd, command))
 
     # ========================================================
     # ===================== Query API ========================
@@ -134,14 +138,14 @@ class KubeCluster(Cluster):
             }
         }
         """
-        all_processes = BeneDict(self.query_resources('pod',output_format='json',
-                                            namespace=experiment_name))
+        all_processes = BeneDict(self.query_resources('pod', output_format='json',
+                                                      namespace=experiment_name))
         out = OrderedDict()
         for pod in all_processes.items:
             pod_name = pod.metadata.name
             if 'containerStatuses' in pod.status: # Pod is created
                 container_statuses = self._parse_container_statuses(
-                                        pod.status.containerStatuses)
+                    pod.status.containerStatuses)
                 # test if the process is stand-alone
                 if len(container_statuses) == 1 and list(container_statuses.keys())[0] == pod_name:
                     if not None in out:
@@ -153,7 +157,7 @@ class KubeCluster(Cluster):
                 out[pod_name] = {'~': self._parse_unstarted_pod_statuses(pod.status)}
         return out
 
-    def _parse_unstarted_pod_statuses(self, di):
+    def _parse_unstarted_pod_statuses(self, data):
         out = OrderedDict([
             ('Ready', '0'),
             ('Restarts', '0'),
@@ -161,9 +165,9 @@ class KubeCluster(Cluster):
         ])
         return out
 
-    def _parse_container_statuses(self, li):
+    def _parse_container_statuses(self, status_list):
         out = OrderedDict()
-        for container_status in li:
+        for container_status in status_list:
             container_name = container_status.name
             state = list(container_status.state.keys())[0]
             state_info = container_status.state[state]
@@ -180,15 +184,16 @@ class KubeCluster(Cluster):
         elif state == 'running':
             return 'running: {}'.format(self._get_age(state_info.startedAt))
         elif state == 'completed':
-            return 'completed ({}) after {}: {}'.format(state_info.exitCode,
-                    self._get_age(state_info.startedAt,state_info.finishedAt),
-                                            state_info.reason)
+            return 'completed ({}) after {}: {}' \
+                .format(state_info.exitCode,
+                        self._get_age(state_info.startedAt, state_info.finishedAt),
+                        state_info.reason)
 
     def _get_age(self, start_time_str, finish_time_str=None):
         """
         Args:
             start_time_str: ISO time string '%Y-%m-%dT%H:%M:%SZ' for start time
-            finish_time_str: ISO time string or UTC now 
+            finish_time_str: ISO time string or UTC now
         """
         start_time = datetime.strptime(start_time_str, '%Y-%m-%dT%H:%M:%SZ')
         if finish_time_str:
@@ -202,7 +207,7 @@ class KubeCluster(Cluster):
         days = abs(delta.days)
         if days:
             hrs = seconds // 3600
-            return '{}d{}h'.format(days,hrs)
+            return '{}d{}h'.format(days, hrs)
         else:
             minutes = seconds // 60
             hrs = seconds / 3600
@@ -223,10 +228,12 @@ class KubeCluster(Cluster):
             'p2': {'status': 'dead'}
         }
         """
-        res = self.query_resources('pod',names=[process_group_name],output_format='json',
-                                            namespace=experiment_name)
+        res = self.query_resources('pod', names=[process_group_name],
+                                   output_format='json',
+                                   namespace=experiment_name)
         if not res:
-            raise ValueError('Cannot find process_group {} in experiment {}'.format(process_group_name, experiment_name))
+            raise ValueError('Cannot find process_group {} in experiment {}' \
+                .format(process_group_name, experiment_name))
         pod = BeneDict(res)
         return self._parse_container_statuses(pod.status.containerStatuses)
 

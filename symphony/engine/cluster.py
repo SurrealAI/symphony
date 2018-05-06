@@ -1,8 +1,8 @@
 """
 Cluster subclasses are the actual execution engines
 """
-from collections import OrderedDict
 from symphony.engine.application_config import SymphonyConfig
+from symphony.utils.common import deduplicate_with_order
 
 
 _BACKEND_REGISTRY = {}
@@ -155,7 +155,7 @@ class Cluster(metaclass=_BackendRegistry):
         Args:
             process_group(string): None if process is standalone
             follow(bool): set to True to wait for new logs
-            since(int): the line to start getting logs from 
+            since(int): the line to start getting logs from
             tail(int): only get the last * lines of logs
             print_logs(bool): True to print logs to stdout
         """
@@ -224,7 +224,7 @@ class Cluster(metaclass=_BackendRegistry):
         matches += sorted([n for n in all_names if n.startswith(prefixed_name)])
         matches += sorted([n for n in all_names if n.startswith(name)])
         matches += sorted([n for n in all_names if name in n])
-        matches = self._deduplicate_with_order(matches)
+        matches = deduplicate_with_order(matches)
         return matches
 
     def prefix_username(self, name):
@@ -232,11 +232,3 @@ class Cluster(metaclass=_BackendRegistry):
         if username is None:
             return name
         return username + '-' + name
-
-    def _deduplicate_with_order(self, seq):
-        """
-        https://stackoverflow.com/questions/480214/how-do-you-remove-duplicates-from-a-list-in-whilst-preserving-order
-        deduplicate list while preserving order
-        """
-        return list(OrderedDict.fromkeys(seq))
-

@@ -12,7 +12,7 @@ class BaseSpec:
         raise NotImplementedError
 
     @classmethod
-    def load_dict(cls):
+    def load_dict(cls, data):
         raise NotImplementedError
 
     # ---------------- derived JSON/YAML methods -----------------
@@ -47,14 +47,14 @@ class BaseSpec:
         df.dump_json_file(self.dump_dict(), file_path, **dumper_kwargs)
 
     def dump_json_str(self, **dumper_kwargs):
-        "Returns: string"
+        """Returns: string"""
         return df.dump_json_str(self.dump_dict(), **dumper_kwargs)
 
     def dump_yaml_file(self, file_path, **dumper_kwargs):
         df.dump_yaml_file(self.dump_dict(), file_path, **dumper_kwargs)
 
     def dump_yaml_str(self, **dumper_kwargs):
-        "Returns: string"
+        """Returns: string"""
         return df.dump_yaml_str(self.dump_dict(), **dumper_kwargs)
 
     def dump_file(self, file_path, **dumper_kwargs):
@@ -66,4 +66,3 @@ class BaseSpec:
             IOError: if extension is not ".json", ".yml", or ".yaml"
         """
         df.dump_file(self.dump_dict(), file_path, **dumper_kwargs)
-

@@ -12,7 +12,7 @@ class ProcessGroupSpec(BaseSpec):
 
     def add_process(self, process):
         """Inserts a process to this process group
-        Args: 
+        Args:
             process(ProcessSpec): Process to be added
         """
         assert isinstance(process, ProcessSpec)
@@ -28,8 +28,8 @@ class ProcessGroupSpec(BaseSpec):
         if self.parent_experiment is not None:
             raise ValueError('[Error] Process group {} cannot be added to experiment {}. \
                 It is already in experiment {}'.format(self.name,
-                                                        experiment.name, 
-                                                        self.parent_experiment.name))
+                                                       experiment.name,
+                                                       self.parent_experiment.name))
         self.parent_experiment = experiment
         for process in self.processes.values():
             experiment.add_process(process, lone=False)
@@ -48,26 +48,26 @@ class ProcessGroupSpec(BaseSpec):
         """
         if self._ProcessClass is None:
             raise NotImplementedError('Please define class variable _ProcessClass')
-        p = self._ProcessClass(*args, **kwargs)
-        self.add_process(p)
-        return p
+        process = self._ProcessClass(*args, **kwargs)
+        self.add_process(process)
+        return process
 
     def list_processes(self):
         return self.processes.values()
 
     @classmethod
-    def load_dict(cls, di):
-        instance = cls(di['name'])
-        instance._load_dict(di)
+    def load_dict(cls, data):
+        instance = cls(data['name'])
+        instance._load_dict(data)
         return instance
 
-    def _load_dict(self, di):
-        ps = di['processes']
-        for dictionary in ps:
+    def _load_dict(self, data):
+        processes = data['processes']
+        for dictionary in processes:
             self.add_process(self._ProcessClass.load_dict(dictionary))
 
     def dump_dict(self):
-        ps = []
+        processes = []
         for process in self.list_processes():
-            ps.append(process.dump_dict())
-        return {'processes': ps, 'name': self.name}
+            processes.append(process.dump_dict())
+        return {'processes': processes, 'name': self.name}

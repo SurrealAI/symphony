@@ -5,39 +5,40 @@ Order of spec: Cluster -> Experiment -> ProcessGroup -> Process
 from symphony.engine import *
 from symphony.kube import *
 
-cluster = Cluster.new('kube')
-print(type(cluster))
-exp = cluster.new_experiment('exp')
-nonagent = exp.new_process_group('group')
-learner = nonagent.new_process('proc1', container_image='def', command='cmd1')
-learner.binds('myserver')
-replay = nonagent.new_process('proc2',  container_image='cpu', args='cmd2')
-replay.connects('myserver')
 
-agents = []
-for i in range(8):
-    agent = exp.new_process('agent' + str(i), container_image='gpu', args=['--cmd'])
-    agent.connects('myserver')
-    agents.append(agent)
+def test_kube_topdown():
+    cluster = Cluster.new('kube')
+    exp = cluster.new_experiment('exp')
+    nonagent = exp.new_process_group('group')
+    learner = nonagent.new_process('proc1', container_image='def', command='cmd1')
+    learner.binds('myserver')
+    replay = nonagent.new_process('proc2',  container_image='cpu', args='cmd2')
+    replay.connects('myserver')
 
-tb = exp.new_process('tb', container_image='tensorboard', args=['--logdir'])
-tb.exposes('tensorboard')
+    agents = []
+    for i in range(8):
+        agent = exp.new_process('agent' + str(i), container_image='gpu', args=['--cmd'])
+        agent.connects('myserver')
+        agents.append(agent)
 
-# do some more kube specific things
-for process in exp.list_processes():
-    process.mount_nfs(server='surreal-shared-fs-vm', path='/data', mount_path='/fs')
+    tb = exp.new_process('tb', container_image='tensorboard', args=['--logdir'])
+    tb.exposes('tensorboard')
 
-tb.resource_request(cpu=1.7)
-tb.node_selector(key='surreal-node', value='agent')
-tb.add_toleration(key='surreal', operator='Exists', effect='NoExecute')
-tb.image_pull_policy('Always')
+    # do some more kube specific things
+    for process in exp.list_processes():
+        process.mount_nfs(server='surreal-shared-fs-vm', path='/data', mount_path='/fs')
 
-# nonagent.resource_request(cpu=7) This is not well defined, do we want every container 
-# to request for 7 cpus? Or do we want the first container to request for 7 cpus?
-learner.resource_request(cpu=7)
-nonagent.node_selector(key='surreal-node', value='nonagent-cpu')
-nonagent.add_toleration(key='surreal', operator='Exists', effect='NoExecute')
+    tb.resource_request(cpu=1.7)
+    tb.node_selector(key='surreal-node', value='agent')
+    tb.add_toleration(key='surreal', operator='Exists', effect='NoExecute')
+    tb.image_pull_policy('Always')
 
-nonagent.image_pull_policy('Always')
+    # nonagent.resource_request(cpu=7) This is not well defined, do we want every container 
+    # to request for 7 cpus? Or do we want the first container to request for 7 cpus?
+    learner.resource_request(cpu=7)
+    nonagent.node_selector(key='surreal-node', value='nonagent-cpu')
+    nonagent.add_toleration(key='surreal', operator='Exists', effect='NoExecute')
 
-cluster.launch(exp)
+    nonagent.image_pull_policy('Always')
+
+    cluster.launch(exp)
