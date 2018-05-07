@@ -1,11 +1,10 @@
+import copy
 from symphony.spec import ExperimentSpec
 from symphony.engine.address_book import AddressBook
+from symphony.utils.common import sanitize_name_kubernetes
 from .process import KubeProcessSpec
 from .process_group import KubeProcessGroupSpec
 from .builder import KubeIntraClusterService, KubeCloudExternelService
-from symphony.utils.common import dump_yml, sanitize_name_kubernetes
-import copy
-import itertools
 
 
 class KubeExperimentSpec(ExperimentSpec):
@@ -16,14 +15,14 @@ class KubeExperimentSpec(ExperimentSpec):
         name = sanitize_name_kubernetes(name)
         super().__init__(name)
         if portrange is None:
-            portrange = list(range(7000,9000))
+            portrange = list(range(7000, 9000))
         self.portrange = portrange
         self.binded_services = {}
         self.exposed_services = {}
 
     def _compile(self):
-        self.ab = AddressBook()
-        
+        self.address_book = AddressBook()
+
         self.declare_services()
         self.assign_addresses()
 
@@ -33,7 +32,7 @@ class KubeExperimentSpec(ExperimentSpec):
             components['exposed-service-' + k] = v.yml()
         for k, v in self.binded_services.items():
             components['binded-service-' + k] = v.yml()
-    
+
         for process_group in self.list_process_groups():
             components['process-group-' + process_group.name] = process_group.yml()
         for process in self.list_processes():
@@ -46,15 +45,13 @@ class KubeExperimentSpec(ExperimentSpec):
         return ''.join(['---\n' + x for x in components.values()])
 
     def assign_addresses(self):
-        # TODO: put into base class
         for exposed_service_name in self.exposed_services:
             exposed_service = self.exposed_services[exposed_service_name]
-            self.ab.add_entry(exposed_service.name, exposed_service_name, exposed_service.port)
+            self.address_book.add_entry(exposed_service.name, exposed_service_name, exposed_service.port)
         for binded_service_name in self.binded_services:
             binded_service = self.binded_services[binded_service_name]
-            self.ab.add_entry(binded_service_name, binded_service_name, binded_service.port)
-        env_dict = self.ab.dump()
-        # Stop here
+            self.address_book.add_entry(binded_service_name, binded_service_name, binded_service.port)
+        env_dict = self.address_book.dump()
         for process in self.list_all_processes():
             process.set_envs(env_dict)
 
@@ -83,7 +80,7 @@ class KubeExperimentSpec(ExperimentSpec):
                 port = process.binded_services[binded_service_name]
                 binded[binded_service_name] = port
                 if port in self.portrange:
-                    portrange.remove(port)                
+                    portrange.remove(port)
 
         for exposed_service_name, port in exposed.items():
             if port is None:
@@ -95,11 +92,22 @@ class KubeExperimentSpec(ExperimentSpec):
                 port = self.get_port(portrange)
             service = KubeIntraClusterService(binded_service_name, port)
             self.binded_services[service.name] = service
-        # TODO: check connect
+        self.validate_connect()
+
+    def validate_connect(self):
+        """
+        Check if all connected services are correctly provided
+        """
+        for process in self.list_all_processes():
+            for connected_service_name in process.connected_services:
+                if connected_service_name not in self.binded_services:
+                    raise ValueError('Service {} is connected by process {} but not binded' \
+                                     .format(connected_service_name, process.name))
 
     def get_port(self, portrange):
         if len(portrange) == 0:
-            raise CompilationError('[Error] Experiment {} ran out of ports on Kubernetes.'.format(self.experiment.name))
+            raise ValueError('[Error] Experiment {} ran out of ports on Kubernetes.' \
+                                .format(self.name))
         return portrange.pop(0)
 
     def _load_dict(self, di):
@@ -107,9 +115,9 @@ class KubeExperimentSpec(ExperimentSpec):
         self.portrange = compact_range_loads(di['portrange'])
 
     def dump_dict(self):
-        di = super().dump_dict()
-        di['portrange'] = compact_range_dumps(self.portrange)
-        return di
+        data = super().dump_dict()
+        data['portrange'] = compact_range_dumps(self.portrange)
+        return data
 
 def compact_range_dumps(li):
     """
@@ -120,7 +128,7 @@ def compact_range_dumps(li):
     low = None
     high = None
     collections = []
-    for i in range(len(li)):
+    for i,number in enumerate(li):
         number = li[i]
         if low is None:
             low = number
@@ -128,14 +136,14 @@ def compact_range_dumps(li):
         elif high + 1 == number:
             high = number
         else:
-            collections.append('{}-{}'.format(low,high))
+            collections.append('{}-{}'.format(low, high))
             low = None
             high = None
-    collections.append('{}-{}'.format(low,high))
+    collections.append('{}-{}'.format(low, high))
     return ','.join(collections)
 
-def compact_range_loads(s):
-    specs = [x.split('-') for x in s.split(',')]
+def compact_range_loads(description):
+    specs = [x.split('-') for x in description.split(',')]
     li = []
     for low, high in specs:
         li += list(range(int(low), int(high)))

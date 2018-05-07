@@ -325,7 +325,7 @@ class KubePodYML(KubeConfigYML):
             if container_yml.data['name'] in self.container_names:
                 continue
             if container_yml.pod_yml is not None and container_yml.pod_yml is not self:
-                raise CompilationError('[Error] Adding a container to different pods')
+                raise ValueError('[Error] Adding a container to different pods')
             for volume in container_yml.mounted_volumes:
                 self.add_volume(volume)
             self.data['spec']['containers'].append(container_yml.data)

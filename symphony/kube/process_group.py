@@ -1,8 +1,7 @@
 from symphony.spec import ProcessGroupSpec
-from symphony.utils.common import sanitize_name_kubernetes
+from symphony.utils.common import sanitize_name_kubernetes, strip_repository_name
 from .process import KubeProcessSpec
-from .builder import KubePodYML
-from benedict.data_format import load_yaml_str
+from .builder import KubePodYML, KubeNFSVolume, KubeGitVolume
 
 
 class KubeProcessGroupSpec(ProcessGroupSpec):
@@ -79,4 +78,3 @@ class KubeProcessGroupSpec(ProcessGroupSpec):
     def set_envs(self, di):
         for process in self.list_processes():
             process.set_envs(di)
-

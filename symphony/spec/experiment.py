@@ -1,9 +1,8 @@
+from symphony.engine.application_config import SymphonyConfig
+from symphony.engine.address_book import AddressBook
 from .base import BaseSpec
 from .process import ProcessSpec
 from .process_group import ProcessGroupSpec
-from symphony.engine.application_config import SymphonyConfig
-from symphony.engine.address_book import AddressBook
-# from symphony.utils.common import 
 
 
 class ExperimentSpec(BaseSpec):
@@ -15,23 +14,24 @@ class ExperimentSpec(BaseSpec):
             if name.find(SymphonyConfig().username) != 0:
                 name = SymphonyConfig().username + '-' + name
         super().__init__(name)
-        self.ab = AddressBook()
+        self.address_book = AddressBook()
         self.lone_processes = {}
         self.all_processes = {}
         self.process_groups = {}
-        
+
     def add_process_group(self, process_group):
         assert isinstance(process_group, ProcessGroupSpec)
         process_group_name = process_group.name
         if process_group_name in self.process_groups:
             raise ValueError('[Error] Cannot add process group {} to experiment \
-                {}: a process group with the same name already exists'.format(process_group_name, self.name))
+                {}: a process group with the same name already exists' \
+                .format(process_group_name, self.name))
         self.process_groups[process_group_name] = process_group
         process_group._set_experiment(self)
 
     def add_process_groups(self, process_groups):
-        for pg in process_groups:
-            self.add_process_group(pg)
+        for process_group in process_groups:
+            self.add_process_group(process_group)
 
     def new_process_group(self, *args, **kwargs):
         """
@@ -42,9 +42,9 @@ class ExperimentSpec(BaseSpec):
         """
         if self._ProcessGroupClass is None:
             raise NotImplementedError('please define class variable _ProcessGroupClass')
-        pg = self._ProcessGroupClass(*args, **kwargs)
-        self.add_process_group(pg)
-        return pg
+        process_group = self._ProcessGroupClass(*args, **kwargs)
+        self.add_process_group(process_group)
+        return process_group
 
     def get_process_group(self, name):
         return self.process_groups[name]
@@ -64,17 +64,17 @@ class ExperimentSpec(BaseSpec):
         process._set_experiment(self)
 
     def add_processes(self, processes):
-        for p in processes:
-            self.add_process(p)
+        for process in processes:
+            self.add_process(process)
 
     def new_process(self, *args, **kwargs):
         """
         Returns:
             new ProcessSpec
         """
-        p = self._ProcessClass(*args, **kwargs)
-        self.add_process(p)
-        return p
+        process = self._ProcessClass(*args, **kwargs)
+        self.add_process(process)
+        return process
 
     def get_process(self, name):
         return self.lone_processes[name]
@@ -92,20 +92,24 @@ class ExperimentSpec(BaseSpec):
         instance._load_dict(di)
         return instance
 
-    def _load_dict(self, di):
-        pgs = di['process_groups']
+    def _load_dict(self, data):
+        pgs = data['process_groups']
         for dictionary in pgs:
             self.add_process_group(self._ProcessGroupClass.load_dict(dictionary))
-        ps = di['processes']
-        for dictionary in ps:
+        processes = data['processes']
+        for dictionary in processes:
             self.add_process(self._ProcessClass.load_dict(dictionary))
-        self.ab = AddressBook(di['ab'])
+        self.address_book = AddressBook(data['ab'])
 
     def dump_dict(self):
         pgs = []
         for process_group in self.list_process_groups():
             pgs.append(process_group.dump_dict())
-        ps = []
+        pcs = []
         for process in self.list_processes():
-            ps.append(process.dump_dict())
-        return {'process_groups': pgs, 'processes': ps, 'name': self.name, 'ab': self.ab.entries}
+            pcs.append(process.dump_dict())
+        return {'process_groups': pgs,
+                'processes': pcs,
+                'name': self.name,
+                'ab': self.address_book.entries,
+               }

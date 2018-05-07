@@ -2,6 +2,7 @@ import re
 import sys
 import collections
 from io import StringIO
+from collections import OrderedDict
 import yaml
 
 
@@ -66,7 +67,7 @@ def check_valid_dns(name):
     """
     if not _DNS_RE.match(name):
         raise ValueError(name + ' must be a valid DNS name with only lower-case '
-            'letters, 0-9 and hyphen. No underscore or dot allowed.')
+                         'letters, 0-9 and hyphen. No underscore or dot allowed.')
 
 def is_sequence(obj):
     """
@@ -75,3 +76,10 @@ def is_sequence(obj):
     """
     return (isinstance(obj, collections.Sequence)
             and not isinstance(obj, str))
+
+def deduplicate_with_order(seq):
+    """
+    https://stackoverflow.com/questions/480214/how-do-you-remove-duplicates-from-a-list-in-whilst-preserving-order
+    deduplicate list while preserving order
+    """
+    return list(OrderedDict.fromkeys(seq))

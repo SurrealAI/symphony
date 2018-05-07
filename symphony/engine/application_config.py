@@ -1,19 +1,23 @@
-from symphony.utils.common import print_err
 from os.path import expanduser
-from pathlib import Path
-from benedict.data_format import load_yaml_file, dump_yaml_file, load_json_file
-from benedict import BeneDict
+from symphony.utils.common import print_err
+from benedict.data_format import load_yaml_file, load_json_file
 
 
 class _SymphonyConfigLoader:
     def __init__(self):
         self.registry = {}
+        self.experiment_folder = None # not necessary, suppresses linter error
+        self.username = None # not necessary, suppresses linter error
         self.register_handler('experiment_folder', str)
         self.register_handler('username', str)
 
     def register_handler(self, field, handler):
         """
-        Registers 
+        Registers handler for field so when config loads
+        {
+            field: ...(data)
+        }
+        self.field = handler(data)
         """
         if field in self.registry:
             raise ValueError('Field {} is already registered in SymphonyConfig'.format(field))
@@ -43,18 +47,17 @@ class _SymphonyConfigLoader:
             self.update(load_yaml_file(file))
 
     def update(self, di):
-        keys = di.keys()
         for key, val in di.items():
             if key in self.registry:
-                setattr(self, key, self.registry[key](di[key]))
+                setattr(self, key, self.registry[key](val))
             else:
                 print_err("[Warning] Key {} unrecognized by symphony config, ignored.".format(key))
 
 
 class SymphonyConfig:
     """
-        Reads the path to symphony config yml file. 
-        Order is 
+        Reads the path to symphony config yml file.
+        Order is
             ./.symphony.yml
             SYMPH_GLOBAL_CONFIG
             ~/.symphony.yml
