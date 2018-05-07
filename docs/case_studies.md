@@ -74,3 +74,16 @@ Communication:
 8. S0 adds up all 10 supertask results and report the integration value. It then sends a termination signal to all groupmasters and workers, before terminating itself. 
 
 
+## PyTorch multi-GPU MNIST
+
+TODO
+
+Topology
+
+- ProcessGroup
+    - GPU 0
+    - GPU 1
+    - GPU 2
+    - GPU 3
+- Evaluation process, periodically load checkpoint
+- Tensorboard process
