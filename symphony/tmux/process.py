@@ -14,7 +14,7 @@ class TmuxProcessSpec(ProcessSpec):
         """
         tmux_name_check(name, 'Process')
         super().__init__(name)
-        self.start_dir = os.path.expanduser(start_dir or '~')
+        self.start_dir = os.path.expanduser(start_dir or '.')
         if not isinstance(cmds, (tuple, list)):
             self.cmds = [cmds]
         else:

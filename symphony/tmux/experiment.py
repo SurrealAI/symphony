@@ -21,7 +21,7 @@ class TmuxExperimentSpec(ExperimentSpec):
         # (reference: https://github.com/tmux/tmux/blob/master/session.c)
         tmux_name_check(name, 'Experiment')
         super().__init__(name)
-        self.start_dir = os.path.expanduser(start_dir or '~')
+        self.start_dir = os.path.expanduser(start_dir or '.')
         if not isinstance(preamble_cmds, (tuple, list)):
             self.preamble_cmds = [preamble_cmds]
         else:
