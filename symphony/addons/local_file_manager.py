@@ -1,6 +1,5 @@
 from pathlib import Path
 from os.path import expanduser
-import os
 from symphony.engine import SymphonyConfig
 from symphony.spec import ExperimentSpec
 from benedict.data_format import dump_yaml_str, load_yaml_file
