@@ -227,14 +227,14 @@ class TestTmuxCluster(unittest.TestCase):
     def test_get_log(self):
         self.launch_default_experiment()
         cluster = Cluster.new('tmux')
-        l = cluster.get_log('exp', 'hello', process_group_name='group')
+        l = cluster.get_log('exp', 'hello', process_group='group')
         self.assertIn('Hello World!', l)
 
     def test_experiment_preamble(self):
         self.launch_default_experiment(exp_preamble=['echo exp preamble'])
         cluster = Cluster.new('tmux')
 
-        l = cluster.get_log('exp', 'hello', process_group_name='group')
+        l = cluster.get_log('exp', 'hello', process_group='group')
         self.assertIn('exp preamble', l)
 
         l = cluster.get_log('exp', 'alone')
@@ -245,7 +245,7 @@ class TestTmuxCluster(unittest.TestCase):
                                        group_preamble=['echo group preamble'])
         cluster = Cluster.new('tmux')
 
-        l = cluster.get_log('exp', 'hello', process_group_name='group')
+        l = cluster.get_log('exp', 'hello', process_group='group')
         self.assertIn('exp preamble', l)
         self.assertIn('group preamble', l)
         self.assertLess(l.index('exp preamble'), l.index('group preamble'))

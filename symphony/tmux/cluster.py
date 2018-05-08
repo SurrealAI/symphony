@@ -234,16 +234,21 @@ class TmuxCluster(Cluster):
                 'status': 'live',
         }
 
-    def get_log(self, experiment_name, process_name, process_group_name=None,
-                history=None):
-        """
-        Args:
-            length: number of lines to be captured.
-        """
+    def get_log(self, experiment_name, process_name, process_group=None,
+                follow=False, since=None, tail=None, print_logs=False):
+        if follow:
+            raise ValueError(
+                    '[Error] "follow" is not supported for tmux backend')
+        if since:
+            raise ValueError(
+                    '[Error] "since" is not supported for tmux backend')
         window = self._get_window(
-                experiment_name, process_name, group_name=process_group_name)
+                experiment_name, process_name, group_name=process_group)
         pane = window.attached_pane
         command = ['capture-pane', '-p']
-        if history:
-            command.extend(['-S', str(-abs(history))])
-        return pane.cmd(*command).stdout
+        if tail:
+            command.extend(['-S', str(-abs(tail))])
+        stdout = pane.cmd(*command).stdout
+        if print_logs:
+            print('\n'.join(stdout))
+        return stdout
