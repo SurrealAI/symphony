@@ -6,6 +6,9 @@ from .common import *
 
 
 class TmuxExperimentSpec(ExperimentSpec):
+    _ProcessClass = TmuxProcessSpec
+    _ProcessGroupClass = TmuxProcessGroupSpec
+
     def __init__(self, name, start_dir=None, preamble_cmds=[]):
         """
         Args:

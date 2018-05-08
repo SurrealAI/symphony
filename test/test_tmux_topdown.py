@@ -38,13 +38,13 @@ class TestTmuxCluster(unittest.TestCase):
         except:
             pass
 
-    def launch_default_experiment(self):
+    def launch_default_experiment(self, exp_preamble=[], group_preamble=[]):
         # Create and launch default experiment used by most test cases.
         cluster = Cluster.new('tmux')
 
         # Create specs.
-        exp = cluster.new_experiment('exp')
-        group = exp.new_process_group('group')
+        exp = cluster.new_experiment('exp', preamble_cmds=exp_preamble)
+        group = exp.new_process_group('group', preamble_cmds=group_preamble)
         echo_proc = group.new_process('hello', cmds=['echo Hello World!'])
         lone_proc = exp.new_process('alone', cmds=['echo I am alone'])
 
@@ -88,9 +88,8 @@ class TestTmuxCluster(unittest.TestCase):
         cluster.launch(exp)
 
         # Confirm the launch of experiment on tmux side.
-        # TODO: Change to emtpy_exp after sanitize_name is fixed.
         self.assertListEqual([s.name for s in self.server.sessions],
-                             ['empty-exp'])
+                             ['empty_exp'])
 
         # Check windows
         sess = self.server.sessions[0]
@@ -232,7 +231,7 @@ class TestTmuxCluster(unittest.TestCase):
         self.assertIn('Hello World!', l)
 
     def test_experiment_preamble(self):
-        # XXX
+        
         pass
 
     def test_process_group_preamble(self):
@@ -255,7 +254,7 @@ class TestTmuxCluster(unittest.TestCase):
 
 
     def test_transfer_file(self):
-        # XXX
+        # TODO
         pass
 
     def test_login(self):

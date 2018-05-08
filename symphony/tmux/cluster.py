@@ -122,7 +122,7 @@ class TmuxCluster(Cluster):
                                          process_group=pg)
                 _log(' --> --> Created process', window_name)
 
-        for p in spec.list_lone_processes():
+        for p in spec.list_processes():
             if not dry_run:
                 window = sess.new_window(window_name=p.name)
                 pane = window.attached_pane

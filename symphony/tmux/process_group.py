@@ -6,6 +6,8 @@ from .common import *
 
 
 class TmuxProcessGroupSpec(ProcessGroupSpec):
+    _ProcessClass = TmuxProcessSpec
+
     def __init__(self, name, start_dir=None, preamble_cmds=[]):
         """
         Args:
