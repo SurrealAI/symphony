@@ -294,18 +294,3 @@ class TestTmuxCluster(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
-
-# learner.binds('myserver')
-# replay.connects('myserver')
-#
-# agents = []
-# for i in range(8):
-#     agent = exp.new_process('agent' + str(i), '--cmd')
-#     agent.connects('myserver')
-#     agents.append(agent)
-#
-# tb = exp.new_process('tb', '--logdir')
-# tb.exposes('tensorboard')
-
-# cluster.launch(exp)
