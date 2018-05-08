@@ -124,8 +124,7 @@ class TmuxCluster(Cluster):
 
         for p in spec.list_processes():
             if not dry_run:
-                window = sess.new_window(window_name=p.name)
-                pane = window.attached_pane
+                self._create_process(sess, p, spec.preamble_cmds)
             _log(' --> Created process', p.name)
 
     def launch_batch(self, experiment_specs):
