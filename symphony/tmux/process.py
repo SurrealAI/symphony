@@ -1,9 +1,11 @@
+import os
+
 from symphony.spec import ProcessSpec
 from .common import *
 
 
 class TmuxProcessSpec(ProcessSpec):
-    def __init__(self, name, cmds=None, start_dir=None):
+    def __init__(self, name, cmds=[], start_dir=None):
         """
         Args:
             name: name of the process
@@ -12,7 +14,11 @@ class TmuxProcessSpec(ProcessSpec):
         """
         tmux_name_check(name, 'Process')
         super().__init__(name)
-        self.start_dir = os.path.expanduser(start_dir)
+        self.start_dir = os.path.expanduser(start_dir or '.')
+        if not isinstance(cmds, (tuple, list)):
+            self.cmds = [cmds]
+        else:
+            self.cmds = list(cmds)
         self.cmds = cmds
 
     @classmethod
