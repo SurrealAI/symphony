@@ -1,7 +1,8 @@
 import os
 
 from symphony.spec import ProcessSpec
-from .common import *
+from symphony.utils.common import print_err
+from .common import tmux_name_check
 
 
 class TmuxProcessSpec(ProcessSpec):
@@ -16,10 +17,12 @@ class TmuxProcessSpec(ProcessSpec):
         super().__init__(name)
         self.start_dir = os.path.expanduser(start_dir or '.')
         if not isinstance(cmds, (tuple, list)):
+            print_err(
+                '[Warning] command "{}" for TmuxProcess "{}" should be a list'
+                .format(cmds, name))
             self.cmds = [cmds]
         else:
             self.cmds = list(cmds)
-        self.cmds = cmds
 
     @classmethod
     def load_dict(cls):

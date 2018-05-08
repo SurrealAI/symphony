@@ -1,8 +1,9 @@
 import os
 from symphony.spec import ExperimentSpec
+from symphony.utils.common import print_err
+from .common import tmux_name_check
 from .process import TmuxProcessSpec
 from .process_group import TmuxProcessGroupSpec
-from .common import *
 
 
 class TmuxExperimentSpec(ExperimentSpec):
@@ -24,6 +25,8 @@ class TmuxExperimentSpec(ExperimentSpec):
         self.start_dir = os.path.expanduser(start_dir or '.')
         if not isinstance(preamble_cmds, (tuple, list)):
             self.preamble_cmds = [preamble_cmds]
+            print_err(('[Warning] preamble command "{}" for TmuxExperiment ' +
+                       '"{}" should be a list').format(preamble_cmds, name))
         else:
             self.preamble_cmds = list(preamble_cmds)
 

@@ -78,7 +78,7 @@ class TestTmuxCluster(unittest.TestCase):
             group.new_process('invalid:name', '')
             group.new_process('invalid.name', '')
 
-        group.new_process('Joy', 'echo Success!')
+        group.new_process('Joy', ['echo Success!'])
 
     #################### Launch API tests ####################
 
@@ -141,7 +141,7 @@ class TestTmuxCluster(unittest.TestCase):
 
         # Attempt creating a process with duplicate name
         dupe = cluster.new_experiment('exp')
-        dupe.new_process('alone', 'echo Do I exist already?')
+        dupe.new_process('alone', ['echo Do I exist already?'])
 
         with self.assertRaises(errors.ResourceExistsError):
             cluster.launch(dupe)

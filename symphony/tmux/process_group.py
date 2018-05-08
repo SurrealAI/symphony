@@ -1,8 +1,9 @@
 import os
 
 from symphony.spec import ProcessGroupSpec
+from symphony.utils.common import print_err
+from .common import tmux_name_check
 from .process import TmuxProcessSpec
-from .common import *
 
 
 class TmuxProcessGroupSpec(ProcessGroupSpec):
@@ -21,6 +22,8 @@ class TmuxProcessGroupSpec(ProcessGroupSpec):
         self.start_dir = os.path.expanduser(start_dir or '.')
         if not isinstance(preamble_cmds, (tuple, list)):
             self.preamble_cmds = [preamble_cmds]
+            print_err(('[Warning] preamble command "{}" for TmuxProcessGroup ' +
+                       '"{}" should be a list').format(preamble_cmds, name))
         else:
             self.preamble_cmds = list(preamble_cmds)
 
