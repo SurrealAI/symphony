@@ -1,3 +1,4 @@
+import time
 import unittest
 from unittest import mock
 
@@ -224,12 +225,11 @@ class TestTmuxCluster(unittest.TestCase):
         process_dict = cluster.describe_process('exp', 'alone')
         self.assertDictEqual(process_dict, { 'status': 'live' })
 
-    def test_get_stdout(self):
+    def test_get_log(self):
         self.launch_default_experiment()
         cluster = Cluster.new('tmux')
-
-        stdout = cluster.get_stdout('exp', 'hello', process_group_name='group')
-        print('\n'.join(stdout))
+        l = cluster.get_log('exp', 'hello', process_group_name='group')
+        self.assertIn('Hello World!', l)
 
     def test_experiment_preamble(self):
         # XXX
@@ -265,6 +265,10 @@ class TestTmuxCluster(unittest.TestCase):
     def test_exec_command(self):
         # TODO
         pass
+
+    #################### Process exec tests ####################
+    def test_process_exec(self):
+        self.launch_default_experiment()
 
     #################### Port tests ####################
 
