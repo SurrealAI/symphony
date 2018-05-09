@@ -9,7 +9,7 @@ from .process import TmuxProcessSpec
 class TmuxProcessGroupSpec(ProcessGroupSpec):
     _ProcessClass = TmuxProcessSpec
 
-    def __init__(self, name, start_dir=None, preamble_cmds=[]):
+    def __init__(self, name, start_dir=None, preamble_cmds=None):
         """
         Args:
             name: name of the Experiment
@@ -20,6 +20,8 @@ class TmuxProcessGroupSpec(ProcessGroupSpec):
         tmux_name_check(name, 'ProcessGroup')
         super().__init__(name)
         self.start_dir = os.path.expanduser(start_dir or '.')
+        if preamble_cmds is None:
+            preamble_cmds = []
         if not isinstance(preamble_cmds, (tuple, list)):
             self.preamble_cmds = [preamble_cmds]
             print_err(('[Warning] preamble command "{}" for TmuxProcessGroup ' +

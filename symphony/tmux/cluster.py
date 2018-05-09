@@ -7,7 +7,7 @@ from symphony.tmux.experiment import TmuxExperimentSpec
 from symphony.errors import *
 
 
-_SERVER_NAME = '__symphony__'
+_SERVER_NAME = 'default'
 _DEFAULT_WINDOW = '__main__'
 
 
@@ -24,6 +24,7 @@ class TmuxCluster(Cluster):
         Args:
             server_name: name of the new Tmux server (i.e. socket_name)
         """
+        super().__init__() # just for linter's happiness
         self._socket_name = server_name or _SERVER_NAME
         # Use /dev/null as config to ignore all user-specific settings.
         self._tmux = libtmux.Server(socket_name=self._socket_name,
@@ -34,11 +35,9 @@ class TmuxCluster(Cluster):
         try:
             sess = self._tmux.find_where({'session_name': session_name})
         except LibTmuxException:
-            raise ValueError(
-                    'Experiment "{}" does not exist'.format(session_name))
+            raise ValueError('Experiment "{}" does not exist'.format(session_name))
         if not sess:
-            raise ValueError(
-                    'Experiment "{}" does not exist'.format(session_name))
+            raise ValueError('Experiment "{}" does not exist'.format(session_name))
         return sess
 
     def _get_window_name(self, process_name, group_name):
@@ -76,7 +75,8 @@ class TmuxCluster(Cluster):
         # Retry loop to make sure we run process commands after
         # shell starts (heuristically checked by ensuring pane has
         # some output in the buffer).
-        cmds = preamble_cmds + process.cmds
+        env_cmds = ['export {}={}'.format(k,v) for k,v in process.env.items()]
+        cmds = env_cmds + preamble_cmds + process.cmds
         if cmds:
             start_time = time.time()
             pane = window.attached_pane
@@ -103,6 +103,8 @@ class TmuxCluster(Cluster):
     def launch(self, spec, dry_run=False):
         _log = _logger(dry_run)
         assert isinstance(spec, TmuxExperimentSpec)
+
+        spec.compile()
 
         # Create a new session for the given Experiment.
         if not dry_run:
