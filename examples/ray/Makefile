@@ -9,3 +9,11 @@ _push:
 	docker push $(cpu_image):latest
 
 push: build _push
+
+
+kube:
+	python symph_launcher.py
+	sleep 2
+	kurreal process
+
+all: push kube
