@@ -19,6 +19,8 @@ class AddressBook(object):
             formatted_name = self.format_name(name)
             output['SYMPH_{}_HOST'.format(formatted_name)] = entry['host']
             output['SYMPH_{}_PORT'.format(formatted_name)] = entry['port']
+            output['SYMPH_{}_ADDR'.format(formatted_name)] = \
+                '{}:{}'.format(entry['host'], entry['port'])
         return output
 
     def format_name(self, name):
