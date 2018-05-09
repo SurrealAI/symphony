@@ -11,12 +11,12 @@ class KubeExperimentSpec(ExperimentSpec):
     _ProcessClass = KubeProcessSpec
     _ProcessGroupClass = KubeProcessGroupSpec
 
-    def __init__(self, name, portrange=None):
+    def __init__(self, name, port_range=None):
         name = sanitize_name_kubernetes(name)
         super().__init__(name)
-        if portrange is None:
-            portrange = list(range(7000, 9000))
-        self.portrange = portrange
+        if port_range is None:
+            port_range = list(range(7000, 9000))
+        self.port_range = port_range
         self.binded_services = {}
         self.exposed_services = {}
 
@@ -61,7 +61,7 @@ class KubeExperimentSpec(ExperimentSpec):
         """
         exposed = {}
         binded = {}
-        portrange = copy.deepcopy(self.portrange)
+        port_range = copy.deepcopy(self.port_range)
         for process in self.list_all_processes():
             if process.standalone:
                 pod_yml = process.pod_yml
@@ -72,24 +72,24 @@ class KubeExperimentSpec(ExperimentSpec):
                 pod_yml.add_label('service-' + exposed_service_name, 'expose')
                 port = process.exposed_services[exposed_service_name]
                 exposed[exposed_service_name] = port
-                if port in self.portrange:
-                    portrange.remove(port)
+                if port in self.port_range:
+                    port_range.remove(port)
 
             for binded_service_name in process.binded_services:
                 pod_yml.add_label('service-' + binded_service_name, 'bind')
                 port = process.binded_services[binded_service_name]
                 binded[binded_service_name] = port
-                if port in self.portrange:
-                    portrange.remove(port)
+                if port in self.port_range:
+                    port_range.remove(port)
 
         for exposed_service_name, port in exposed.items():
             if port is None:
-                port = self.get_port(portrange)
+                port = self.get_port(port_range)
             service = KubeCloudExternelService(exposed_service_name, port)
             self.exposed_services[service.name] = service
         for binded_service_name, port in binded.items():
             if port is None:
-                port = self.get_port(portrange)
+                port = self.get_port(port_range)
             service = KubeIntraClusterService(binded_service_name, port)
             self.binded_services[service.name] = service
         self.validate_connect()
@@ -104,20 +104,21 @@ class KubeExperimentSpec(ExperimentSpec):
                     raise ValueError('Service {} is connected by process {} but not binded' \
                                      .format(connected_service_name, process.name))
 
-    def get_port(self, portrange):
-        if len(portrange) == 0:
+    def get_port(self, port_range):
+        if len(port_range) == 0:
             raise ValueError('[Error] Experiment {} ran out of ports on Kubernetes.' \
                                 .format(self.name))
-        return portrange.pop(0)
+        return port_range.pop(0)
 
     def _load_dict(self, di):
         super()._load_dict(di)
-        self.portrange = compact_range_loads(di['portrange'])
+        self.port_range = compact_range_loads(di['port_range'])
 
     def dump_dict(self):
         data = super().dump_dict()
-        data['portrange'] = compact_range_dumps(self.portrange)
+        data['port_range'] = compact_range_dumps(self.port_range)
         return data
+
 
 def compact_range_dumps(li):
     """
@@ -141,6 +142,7 @@ def compact_range_dumps(li):
             high = None
     collections.append('{}-{}'.format(low, high))
     return ','.join(collections)
+
 
 def compact_range_loads(description):
     specs = [x.split('-') for x in description.split(',')]

@@ -12,7 +12,7 @@ class TmuxExperimentSpec(ExperimentSpec):
     _ProcessClass = TmuxProcessSpec
     _ProcessGroupClass = TmuxProcessGroupSpec
 
-    def __init__(self, name, start_dir=None, preamble_cmds=None, portrange=None):
+    def __init__(self, name, start_dir=None, preamble_cmds=None, port_range=None):
         """
         Args:
             name: name of the Experiment
@@ -29,9 +29,9 @@ class TmuxExperimentSpec(ExperimentSpec):
         self.start_dir = os.path.expanduser(start_dir or '.')
         self.set_preamble_cmds(preamble_cmds)
 
-        if portrange is None:
-            portrange = list(range(7000, 9000))
-        self.portrange = list(portrange)
+        if port_range is None:
+            port_range = list(range(7000, 9000))
+        self.port_range = list(port_range)
         self.exposed_services = {}
         self.binded_services = {}
 
@@ -75,27 +75,27 @@ class TmuxExperimentSpec(ExperimentSpec):
         """
         exposed = {}
         binded = {}
-        portrange = copy.deepcopy(self.portrange)
+        port_range = copy.deepcopy(self.port_range)
         for process in self.list_all_processes():
             for exposed_service_name in process.exposed_services:
                 port = process.exposed_services[exposed_service_name]
                 exposed[exposed_service_name] = port
-                if port in self.portrange:
-                    portrange.remove(port)
+                if port in self.port_range:
+                    port_range.remove(port)
 
             for binded_service_name in process.binded_services:
                 port = process.binded_services[binded_service_name]
                 binded[binded_service_name] = port
-                if port in self.portrange:
-                    portrange.remove(port)
+                if port in self.port_range:
+                    port_range.remove(port)
 
         for exposed_service_name, port in exposed.items():
             if port is None:
-                port = self.get_port(portrange)
+                port = self.get_port(port_range)
             self.exposed_services[exposed_service_name] = port
         for binded_service_name, port in binded.items():
             if port is None:
-                port = self.get_port(portrange)
+                port = self.get_port(port_range)
             self.binded_services[binded_service_name] = port
         self.validate_connect()
 
@@ -111,11 +111,11 @@ class TmuxExperimentSpec(ExperimentSpec):
 
 
     # TODO: factor code
-    def get_port(self, portrange):
-        if len(portrange) == 0:
+    def get_port(self, port_range):
+        if len(port_range) == 0:
             raise ValueError('[Error] Experiment {} ran out of ports on Tmux.' \
                                 .format(self.name))
-        return portrange.pop(0)
+        return port_range.pop(0)
 
     # TODO
     @classmethod
