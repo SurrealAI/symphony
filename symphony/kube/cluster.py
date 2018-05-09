@@ -267,8 +267,6 @@ class KubeCluster(Cluster):
             raise_on_error=True)
         if retcode != 0:
             return ''
-        elif print_logs:
-            print(out)
         else:
             return out
 
