@@ -1,10 +1,13 @@
 """
 Utilities of building a docker image by collecting several local directories
 """
+import os
+import shutil
+import re
 from os.path import expanduser
 from pathlib import Path
-import shutil
 import docker
+
 
 
 class DockerBuilder:
@@ -30,7 +33,7 @@ class DockerBuilder:
         self.configure_context(context_directories)
         self.verbose = verbose
 
-        self.client = docker.from_env()
+        self.client = docker.APIClient()
 
     def configure_context(self, context_directories):
         """
@@ -44,38 +47,101 @@ class DockerBuilder:
                    ]):
         force_update: True to always rezip
                       False to only rezip when the file is missing.
+                      Default True
         """
         self.context_directories = {}
         for entry in context_directories:
             entryname = entry['name']
             if entryname in self.context_directories:
-                raise ValueError('Name {} is referred to by more than two paths: {}, {}' \
+                raise ValueError('[Error] Name {} is referred to by more than two paths: {}, {}' \
                                     .format(entryname, entry['path'],
                                             self.context_directories[entryname]))
+            if 'force_update' not in entry:
+                entry['force_update'] = True
             self.context_directories[entryname] = {
                 'name': entryname,
-                'path': entry['path'],
+                'path': expanduser(entry['path']),
                 'force_update': entry['force_update'],
             }
 
-    def build(self, tag):
+    def build(self, tag=None):
         """
         Excecute build
+        Returns image id or None if build failed
         """
-        self.print("Using temporary build directory {}".format(str(self.temp_directory)))
+        self.print("[Info] Using temporary build directory {}".format(str(self.temp_directory)))
         self.temp_directory.mkdir(parents=True, exist_ok=True)
 
+        # Copy dockerfile
+        self.copy_dockerfile()
         # Copy all temporary files
         for k, v in self.context_directories.items():
             self.retrieve_directory(**v)
 
-        dockerfile = self.dockerfile.open('r')
-
+        print('[Info] Building')
         response = self.client.build(path=str(self.temp_directory),
-                                     decode=True,
-                                     fileobj=dockerfile,
-                                     tag=tag)
-        print(response)
+                                     decode=True, tag=tag)
+        last_event = None
+        for line_parsed in response:
+            self.output_docker_res(line_parsed)
+            last_event = line_parsed
+
+        if last_event is not None and 'stream' in last_event:
+            match = re.search(r'Successfully built ([0-9a-f]+)',
+                              last_event.get('stream', ''))
+            if match:
+                image_id = match.group(1)
+                self.img = image_id
+
+    def output_docker_res(self, line_parsed):
+        """
+        Parse docker output
+        """
+        if 'stream' in line_parsed:
+            self.print(line_parsed['stream'], end='', flush=True)
+        elif 'error' in line_parsed:
+            self.print(line_parsed['error'])
+        else:
+            self.print(line_parsed)
+
+    def push(self, repository, tag=None):
+        """
+        docker push
+        """
+        if self.img is None:
+            raise ValueError("[Error] Image not build, cannot push")
+
+        # Docker api is bad
+        # res = self.client.push(repository, tag=tag, stream=True, decode=True)
+        tag_name = self.tag_name(repository, tag)
+        os.system(' '.join(['docker', 'push', tag_name]))
+
+        # for line in res:
+        #     self.output_docker_res(line)
+
+    def tag(self, repository, tag=None, force=False):
+        """
+        docker tag
+        """
+        if self.img is None:
+            raise ValueError("[Error] Image not build, cannot tag")
+
+        success = self.client.tag(self.img, repository, tag, force)
+        tag_name = self.tag_name(repository, tag)
+
+        if success:
+            self.print('[Info] Successfully tagged {} with {}'.format(self.img, tag_name))
+        else:
+            raise RuntimeError('[Error] Tag {} failed'.format(tag_name))
+
+    def tag_name(self, repository, tag=None):
+        """
+        Returns repository or repository:tag
+        """
+        if tag is None:
+            return repository
+        else:
+            return '{}:{}'.format(repository, tag)
 
     def retrieve_directory(self, name, path, force_update):
         """
@@ -89,16 +155,29 @@ class DockerBuilder:
         target_path = self.temp_directory / name
         if target_path.exists():
             if force_update:
-                self.print("removing cached files at {}".format(target_path))
+                self.print("[Info] Removing cached files at {}".format(target_path))
                 shutil.rmtree(target_path)
             else:
-                self.print("Using cached files at {}".format(target_path))
+                self.print("[Info] Using cached files at {}".format(target_path))
                 return
         source = path
         target = str(target_path)
         self.print('cp -r {} {}'.format(source, target))
         shutil.copytree(source, target)
         return
+
+    def copy_dockerfile(self):
+        """
+        copy dockerfile to temp directory
+        """
+        dockerfile_path = (self.temp_directory / 'Dockerfile')
+        self.print('[Info] Copying dockerfile from {} to {}' \
+                   .format(str(self.dockerfile), str(dockerfile_path)))
+        with dockerfile_path.open('w') as f:
+            with self.dockerfile.open('r') as f_in:
+                for line in f_in:
+                    f.write(line)
+
 
     def print(self, *args, **kwargs):
         """
