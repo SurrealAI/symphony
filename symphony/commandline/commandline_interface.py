@@ -513,30 +513,6 @@ class SymphonyParser(object):
     # =============================================================
     # ==================== Commandline helpers ====================
     # =============================================================
-    def _separate_component_path(self, path, experiment_name):
-        """
-        Args:
-            path(string): 'process_group/process' or 'process'
-        Returns
-            process_group_name (None if not present), process_name
-        """
-        if '/' in path:
-            assert len(path.split('/')) == 2, 'Invalid component path {}'.format(path)
-            process_group, process = path.split('/')
-            pgs = self.cluster.find_process(experiment_name, process)
-            if process_group in pgs:
-                return process_group, process
-            else:
-                raise ValueError('Cannot find {}'.format(path))
-        else:
-            pgs = self.cluster.find_process(experiment_name, path)
-            if len(pgs) == 0:
-                raise ValueError('Cannot find process {}'.format(path))
-            elif len(pgs) == 1:
-                return pgs[0], path
-            else:
-                raise ValueError('Multiple process groups contain {}: {}, which do you mean?'.format(pgs, path))
-
     def _format_scp_path(self, f, experiment_name):
         """
         Returns process_group, process, path for a path provided to scp
