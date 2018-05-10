@@ -21,6 +21,6 @@ def get_ips():
 
 
 while True:
-    time.sleep(3)
+    time.sleep(10)
     print('QUERY WORKERS')
     print(get_ips())
