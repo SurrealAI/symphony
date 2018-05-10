@@ -1,6 +1,6 @@
 from symphony.engine import Cluster
 
-NAME = 'testray2'
+NAME = 'ray-test'
 
 cpu_image = 'us.gcr.io/surreal-dev-188523/jimfan-cpu:latest'
 gpu_image = 'us.gcr.io/surreal-dev-188523/jimfan-gpu:latest'

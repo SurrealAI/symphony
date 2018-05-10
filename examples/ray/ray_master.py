@@ -15,7 +15,6 @@ def f():
 
 print('SUCCESSFULLY STARTED', '='*50)
 
-
 def get_ips():
     # Get a list of the IP addresses of the nodes that have joined the cluster.
     return list(set(ray.get([f.remote() for _ in range(1000)])))
