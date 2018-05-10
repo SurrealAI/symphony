@@ -49,8 +49,8 @@ class SymphonyParser(object):
         self._setup_exec() #
         # Query api
         self._setup_list_experiments() #
-        self._setup_experiment() #
-        self._setup_process() #
+        self._setup_switch_experiment() #
+        self._setup_list_processes() #
         self._setup_log() #
         self._setup_visit() #
 
@@ -63,6 +63,10 @@ class SymphonyParser(object):
             kwargs: kwargs to provide to subparsers.add_parser()
         """
         method_name = 'action_' + name.replace('-', '_')
+        if not hasattr(self, method_name):
+            raise ValueError(
+                'your parser class must define the method "{}()" '
+                'in order to use the "{}" subparser'.format(method_name, name))
         method_func = getattr(self, method_name)  # Symphony.symphony_create()
 
         parser = self.subparsers.add_parser(
@@ -151,15 +155,15 @@ class SymphonyParser(object):
     def _setup_list_experiments(self):
         parser = self.add_subparser(
             'list-experiments',
-            aliases=['ls', 'exps', 'experiments']
+            aliases=['ls', 'lse']
         )
         # no arg to get the current namespace
         self._add_experiment_name(parser, required=False, positional=True)
 
-    def _setup_experiment(self):
+    def _setup_switch_experiment(self):
         parser = self.add_subparser(
-            'experiment',
-            aliases=['exp']
+            'switch-experiment',
+            aliases=['e', 'se']
         )
         parser.add_argument(
             '-f', '--force',
@@ -169,11 +173,14 @@ class SymphonyParser(object):
         # no arg to get the current namespace
         self._add_experiment_name(parser, required=False, positional=True)
 
-    def _setup_process(self):
+    def _setup_list_processes(self):
         """
             same as 'symphony list pod'
         """
-        parser = self.add_subparser('process', aliases=['p', 'processes'])
+        parser = self.add_subparser(
+            'list-processes',
+            aliases=['lsp', 'p']
+        )
         self._add_experiment_name(parser, required=False, positional=True)
 
     def _setup_visit(self):
@@ -229,6 +236,45 @@ class SymphonyParser(object):
     # ==================== Commandline functions ====================
     # ===============================================================
     def _interactive_find_exp(self, name):
+        matches, is_exact = self.cluster.fuzzy_match_experiment(name)
+        assert isinstance(matches, list), 'INTERNAL'
+        if is_exact:
+            return matches[0]
+        else:
+            return self._interactive_find(matches, 'Experiment "{}"'.format(name))
+
+    def _interactive_find_process(self, proc_path, exp_name):
+        """
+        Args:
+            proc_path:
+            - 'process_group/process': exact and must be matched verbatim
+            - 'process': will be fuzzy matched to the closest process name in
+                any process group. If two pgroups have the same process, will
+                display a selection prompt.
+        Returns
+            process_group_name (None if not present), process_name
+        """
+        if '/' in proc_path:  # must be exact match
+            assert len(proc_path.split('/')) == 2, \
+                'Invalid process path {}. Should be "process_group/process"'.format(proc_path)
+            pgroup, proc_name = proc_path.split('/')
+            proc_pairs, is_exact = self.cluster.fuzzy_match_process(proc_name, exp_name)
+            if is_exact:
+                assert len(proc_pairs) == 1, \
+                    'INTERNAL: (pgroup, pname) should be exactly one pair'
+                return proc_pairs[0]
+            else:
+                raise ValueError('Cannot find process path "{}"'.format(proc_path))
+        else:
+            proc_pairs, is_exact = self.cluster.fuzzy_match_process(proc_path, exp_name)
+            # avoid matching multiple PGroups with the same proc name
+            # leave the above case to fuzzy matcher prompt
+            if is_exact and len(proc_pairs) == 1:
+                return proc_pairs[0]
+            return self._interactive_find(proc_pairs,
+                  'Process "{}" in Experiment "{}"'.format(proc_path, exp_name))
+
+    def _interactive_find(self, matches, error_message):
         """
         Find partial match of namespace, ask user to verify before switching to
         ns or delete experiment.
@@ -237,13 +283,9 @@ class SymphonyParser(object):
         - symphony ns
         Disabled when --force
         """
-        matches = self.cluster.fuzzy_match_experiment(name)
-        if isinstance(matches, str):
-            return matches  # exact match
         if len(matches) == 0:
-            print_err('[Error] Experiment `{}` not found. '
-                      'Please run `symphony list ns` and check for typos.'.format(name))
-            return None
+            print_err('[Error] {} not found. Please check for typos.'.format(error_message))
+            sys.exit(1)
         elif len(matches) == 1:
             match = matches[0]
             print_err('[Warning] No exact match. Fuzzy match only finds one candidate: "{}"'
@@ -260,9 +302,10 @@ class SymphonyParser(object):
             ans = int(ans)
         except ValueError:  # cannot convert to int, quit
             print_err('aborted')
-            return None
+            sys.exit(1)
         if ans >= len(matches):
-            raise IndexError('[Error] Must enter a number between 0 - {}'.format(len(matches)-1))
+            print_err('[Error] Must enter a number between 0 - {}'.format(len(matches)-1))
+            sys.exit(1)
         return matches[ans]
 
     def _delete(self, experiment_name, force, dry_run):
@@ -319,7 +362,7 @@ class SymphonyParser(object):
         for exp in self.cluster.list_experiments():
             print(exp)
 
-    def action_experiment(self, args):
+    def action_switch_experiment(self, args):
         """
         `symphony exp`: show the current experiment
         `symphony exp <namespace>`: switch context to another experiment
@@ -348,7 +391,7 @@ class SymphonyParser(object):
             sys.exit(1)
         return name
 
-    def action_process(self, args):
+    def action_list_processes(self, args):
         """
             same as 'symphony list pod'
         """
@@ -397,7 +440,8 @@ class SymphonyParser(object):
         Show logs of components:
         """
         experiment_name = self._get_experiment(args)
-        process_group_name, process_name = self._separate_component_path(args.component_name, experiment_name)
+        process_group_name, process_name = \
+            self._interactive_find_process(args.component_name, experiment_name)
         self.cluster.get_log(
             experiment_name=experiment_name,
             process_name=process_name,
@@ -414,7 +458,8 @@ class SymphonyParser(object):
         kubectl exec -ti <component> -- <command>
         """
         experiment_name = self._get_experiment(args)
-        process_group_name, process_name = self._separate_component_path(args.component_name, experiment_name)
+        process_group_name, process_name = \
+            self._interactive_find_process(args.component_name, experiment_name)
         if not args.has_remainder:
             raise RuntimeError(
                 'please enter your command after "--". '
@@ -452,7 +497,7 @@ class SymphonyParser(object):
         kubectl exec -ti <component> -- /bin/bash
         """
         exp = self._get_experiment(args)
-        pg, p = self._separate_component_path(args.component_name, exp)
+        pg, p = self._interactive_find_process(args.component_name, exp)
         self.cluster.login(experiment_name=exp, process_name=p, process_group_name=pg)
 
     def action_visit(self, args):
@@ -475,8 +520,7 @@ class SymphonyParser(object):
         Returns
             process_group_name (None if not present), process_name
         """
-
-        if path.find('/') >= 0:
+        if '/' in path:
             assert len(path.split('/')) == 2, 'Invalid component path {}'.format(path)
             process_group, process = path.split('/')
             pgs = self.cluster.find_process(experiment_name, process)
@@ -499,7 +543,7 @@ class SymphonyParser(object):
         """
         if ':' in f:
             path_name, path = f.split(':')
-            pg, p = self._separate_component_path(path_name, experiment_name)
+            pg, p = self._interactive_find_process(path_name, experiment_name)
             return pg, p, path
         else:
             return None, None, f
