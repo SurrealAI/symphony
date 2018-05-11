@@ -253,22 +253,28 @@ class KubeCluster(Cluster):
             return pg[process_name]
 
     def get_log(self, experiment_name, process_name, process_group=None,
-                    follow=False, since=0, tail=100, print_logs=False):
+                follow=False, since=0, tail=100, print_logs=False):
         if process_group is None:
             pod_name, container_name = process_name, process_name
         else:
             pod_name, container_name = process_group, process_name
-        out, err, retcode = runner.run_verbose(
-            self._get_logs_cmd(
-                pod_name, process_name, follow=follow,
-                since=since, tail=tail, namespace=experiment_name
-            ),
-            print_out=print_logs,
-            raise_on_error=True)
-        if retcode != 0:
-            return ''
+
+        cmd = self._get_logs_cmd(
+            pod_name, process_name, follow=follow,
+            since=since, tail=tail, namespace=experiment_name
+        )
+        if follow:  # os.system will not block, stream the latest logs to stdout
+            runner.run_raw(cmd)
         else:
-            return out
+            out, err, retcode = runner.run_verbose(
+                cmd,
+                print_out=print_logs,
+                raise_on_error=True
+            )
+            if retcode != 0:
+                return ''
+            else:
+                return out
 
     def external_url(self, experiment_name, service_name):
         res = BeneDict(self.query_resources('svc', 'yaml',

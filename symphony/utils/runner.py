@@ -10,6 +10,7 @@ def run_process(cmd, stdin=''):
     out, err = proc.communicate(stdin.encode())
     return out.decode('utf-8'), err.decode('utf-8'), proc.returncode
 
+
 def run(cmd, dry_run=False, stdin=''):
     if dry_run:
         print(cmd)
@@ -20,6 +21,7 @@ def run(cmd, dry_run=False, stdin=''):
             print("Please try `gcloud container clusters get-credentials mycluster` "
                   "to fix credential error")
         return out.strip(), err.strip(), retcode
+
 
 def run_raw(cmd, print_cmd=False, dry_run=False):
     """
@@ -35,6 +37,7 @@ def run_raw(cmd, print_cmd=False, dry_run=False):
             print(cmd)
         return os.system(cmd)
 
+
 def _print_err_return(out, err, retcode):
     print_err('error code:', retcode)
     print_err('*' * 20, 'stderr', '*' * 20)
@@ -42,6 +45,7 @@ def _print_err_return(out, err, retcode):
     print_err('*' * 20, 'stdout', '*' * 20)
     print_err(out)
     print_err('*' * 46)
+
 
 def run_verbose(cmd, print_out=True, raise_on_error=False, dry_run=False, stdin=''):
     out, err, retcode = run(cmd, dry_run=dry_run, stdin=stdin)
