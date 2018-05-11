@@ -5,7 +5,7 @@ from collections import OrderedDict
 from benedict import BeneDict
 from benedict.data_format import load_yaml_str, load_json_str
 from symphony.engine import Cluster
-from symphony.ext import LocalFileManager
+from symphony.addons import LocalFileManager
 from symphony.utils.common import check_valid_dns, is_sequence
 import symphony.utils.runner as runner
 from .experiment import KubeExperimentSpec

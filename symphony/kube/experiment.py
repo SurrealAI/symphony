@@ -47,10 +47,14 @@ class KubeExperimentSpec(ExperimentSpec):
     def assign_addresses(self):
         for exposed_service_name in self.exposed_services:
             exposed_service = self.exposed_services[exposed_service_name]
-            self.address_book.add_entry(exposed_service.name, exposed_service_name, exposed_service.port)
+            self.address_book.add_entry(exposed_service.name,
+                                        exposed_service.name,
+                                        exposed_service.port)
         for binded_service_name in self.binded_services:
             binded_service = self.binded_services[binded_service_name]
-            self.address_book.add_entry(binded_service_name, binded_service_name, binded_service.port)
+            self.address_book.add_entry(binded_service.name,
+                                        binded_service.name,
+                                        binded_service.port)
         env_dict = self.address_book.dump()
         for process in self.list_all_processes():
             process.set_envs(env_dict)

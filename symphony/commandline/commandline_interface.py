@@ -95,7 +95,7 @@ class SymphonyParser(object):
 
     def _setup_delete_batch(self):
         parser = self.add_subparser('delete-batch', aliases=['db'])
-        parser.add_argument('experiment_name', type=str)
+        parser.add_argument('experiment_names', nargs='+', type=str, metavar='experiment_name')
         parser.add_argument(
             '-f', '--force',
             action='store_true',
@@ -349,10 +349,11 @@ class SymphonyParser(object):
         If experiment_name is omitted, default to deleting the current namespace.
         Matches all possible experiments
         """
-        experiments = self.cluster.list_experiments()
-        for experiment in experiments:
-            if re.match(args.experiment_name, experiment):
-                self._delete(experiment, args.force, args.dry_run)
+        for experiment_name in args.experiment_names:
+            experiments = self.cluster.list_experiments()
+            for experiment in experiments:
+                if re.match(experiment_name, experiment):
+                    self._delete(experiment, args.force, args.dry_run)
 
     def action_list_experiments(self, _):
         """
