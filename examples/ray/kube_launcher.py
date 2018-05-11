@@ -1,9 +1,11 @@
 import argparse
 from symphony.engine import Cluster
 from pprint import pprint
+import json
 
 
 USE_SURREAL = 0
+MASTER_ADDR = 'master-redis'
 
 
 parser = argparse.ArgumentParser()
@@ -22,7 +24,7 @@ master = exp.new_process(
     args=['--py', 'ray_master.py'],
     container_image=cpu_image
 )
-master.binds('redis-server')
+master.binds(MASTER_ADDR)
 if USE_SURREAL:
     master.node_selector(key='surreal-node', value='nonagent-cpu')
     master.resource_request(cpu=7)
@@ -33,9 +35,11 @@ for i in range(args.workers):
         'worker{}'.format(i),
         container_image=cpu_image,
         # args=['--bash', 'ray/ray_worker.sh', i]
-        args=['--py', 'ray_worker.py', i]
+        args=['--py', 'ray_satellite.py'],
+        env={'SYMPH_RAY_ID': str(i),
+             'SYMPH_RAY_RESOURCE': json.dumps({'agents': 2})}
     )
-    worker.connects('redis-server')
+    worker.connects(MASTER_ADDR)
     if USE_SURREAL:
         worker.node_selector(key='surreal-node', value='agent')
         worker.resource_request(cpu=1.5)
