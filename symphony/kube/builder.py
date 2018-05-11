@@ -1,11 +1,11 @@
+import copy
 from symphony.utils.common import merge_dict, strip_repository_name
 from benedict import BeneDict
-import copy
 
 
 class KubeConfigYML(object):
     def __init__(self):
-        self.data = {}
+        self.data = BeneDict({})
 
     def set_attr(self, new_config):
         """
@@ -14,11 +14,15 @@ class KubeConfigYML(object):
         merge_dict(self.data, new_config)
 
     def yml(self):
+        """
+        Dump yml string for kubernetes launch yml
+        """
         return self.data.dump_yaml_str()
 
 
 class KubeService(KubeConfigYML):
     def __init__(self, name):
+        super().__init__()
         self.name = name
         self.data = BeneDict({
             'apiVersion': 'v1',
@@ -36,6 +40,7 @@ class KubeService(KubeConfigYML):
 
 class KubeIntraClusterService(KubeService):
     def __init__(self, name, port):
+        super().__init__()
         self.name = name
         self.port = port
         self.data = BeneDict({
@@ -55,6 +60,7 @@ class KubeIntraClusterService(KubeService):
 
 class KubeCloudExternelService(KubeService):
     def __init__(self, name, port):
+        super().__init__()
         self.name = name
         self.port = port
         self.data = BeneDict({
@@ -73,6 +79,10 @@ class KubeCloudExternelService(KubeService):
 
 
 class KubeVolume(object):
+    """
+    Simple wrapper for some volumes that we are using
+    https://kubernetes.io/docs/concepts/storage/volumes/#types-of-volumes
+    """
     def __init__(self, name):
         self.name = name
 
@@ -82,20 +92,58 @@ class KubeVolume(object):
         """
         raise NotImplementedError
         # return {'name': self.name}
-    
+
     @classmethod
     def load(cls, di):
         if di['type'] == 'KubeNFSVolume':
             return KubeNFSVolume.load(di)
         elif di['type'] == 'KubeGitVolume':
             return KubeGitVolume.load(di)
+        elif di['type'] == 'KubeHostPathVolume':
+            return KubeHostPathVolume.load(di)
 
     def save(self):
         raise NotImplementedError
 
+
+class KubeHostPathVolume(KubeVolume):
+    def __init__(self, name, path, hostpath_type=''):
+        """
+            path: directory location on host
+            hostpath_type: optional, type of hostpath
+        """
+        super().__init__(name)
+        self.hostpath_type = hostpath_type
+        self.path = path
+
+    def pod_spec(self):
+        """
+            Returns a spec to fall under Pod: spec:
+        """
+        return BeneDict({
+            'name': self.name,
+            'hostPath': {
+                'hostpath_type': self.hostpath_type,
+                'path': self.path,
+                },
+            })
+
+    @classmethod
+    def load(cls, di):
+        return cls(di['name'], di['hostpath_type'], di['path'])
+
+    def save(self):
+        return {
+            'name': self.name,
+            'hostpath_type': self.hostpath_type,
+            'path': self.path,
+            'type': 'KubeHostPathVolume'
+        }
+
+
 class KubeNFSVolume(KubeVolume):
     def __init__(self, name, server, path):
-        self.name = name
+        super().__init__(name)
         self.server = server
         self.path = path
 
@@ -103,9 +151,11 @@ class KubeNFSVolume(KubeVolume):
         """
             Returns a spec to fall under Pod: spec:
         """
-        return BeneDict({'name': self.name, 'nfs': {
+        return BeneDict({
+            'name': self.name,
+            'nfs': {
                 'server': self.server,
-                'path': self.path
+                'path': self.path,
             }
         })
 
@@ -115,14 +165,14 @@ class KubeNFSVolume(KubeVolume):
 
     def save(self):
         return {'name': self.name,
-                'server': self.server, 
+                'server': self.server,
                 'path': self.path,
                 'type': 'KubeNFSVolume'}
 
 
 class KubeGitVolume(KubeVolume):
     def __init__(self, name, repository, revision):
-        self.name = name
+        super().__init__(name)
         self.repository = repository
         self.revision = revision
 
@@ -130,9 +180,11 @@ class KubeGitVolume(KubeVolume):
         """
             Returns a spec to fall under Pod: spec:
         """
-        return BeneDict({'name': self.name, 'gitRepo': {
+        return BeneDict({
+            'name': self.name,
+            'gitRepo': {
                 'repository': self.repository,
-                'revision': self.revision
+                'revision': self.revision,
             }
         })
 
@@ -141,19 +193,22 @@ class KubeGitVolume(KubeVolume):
         return cls(di['name'], di['repository'], di['revision'])
 
     def save(self):
-        return {'name': self.name,
-                'repository': self.repository, 
-                'revision': self.revision,
-                'type': 'KubeGitVolume'}
+        return {
+            'name': self.name,
+            'repository': self.repository,
+            'revision': self.revision,
+            'type': 'KubeGitVolume',
+        }
 
-# TODO: set command / set args
+
 class KubeContainerYML(KubeConfigYML):
     def __init__(self, name, image):
+        super().__init__()
         self.data = BeneDict({
-                        'name': name,
-                        'image': image,
-                        'env': [{'name': 'SYMPHONY_ROLE', 'value': name}]
-                    })
+            'name': name,
+            'image': image,
+            'env': [{'name': 'SYMPHONY_ROLE', 'value': name}]
+        })
         self.mounted_volumes = []
         self.pod_yml = None
 
@@ -161,7 +216,7 @@ class KubeContainerYML(KubeConfigYML):
     def load(cls, di):
         instance = cls('', '')
         instance.data = BeneDict(di['data'])
-        instance.mount_volumes = [KubeVolume.load(x) for x in di['mounted_volumes']]
+        instance.mounted_volumes = [KubeVolume.load(x) for x in di['mounted_volumes']]
         return instance
 
     def save(self):
@@ -186,7 +241,7 @@ class KubeContainerYML(KubeConfigYML):
         self.data.env.append(BeneDict({'name': name, 'value': value}))
 
     def set_envs(self, di):
-        for k,v in di.items():
+        for k, v in di.items():
             self.set_env(k, v)
 
     def mount_volume(self, volume, mount_path):
@@ -221,7 +276,7 @@ class KubeContainerYML(KubeConfigYML):
             merge_dict(self.data, {'resources': {'limits': {'cpu': cpu}}})
         if memory is not None:
             merge_dict(self.data, {'resources': {'limits': {'memory': memory}}})
-        if gpu is not None: 
+        if gpu is not None:
             merge_dict(self.data, {'resources': {'limits': {'nvidia.com/gpu': gpu}}})
 
     def image_pull_policy(self, policy):
@@ -231,6 +286,7 @@ class KubeContainerYML(KubeConfigYML):
 
 class KubePodYML(KubeConfigYML):
     def __init__(self, name):
+        super().__init__()
         self.data = BeneDict({
             'apiVersion': 'v1',
             'kind': 'Pod',
@@ -258,17 +314,11 @@ class KubePodYML(KubeConfigYML):
         data.spec.containers = []
         return {'data': data}
 
-    def from_process(process):
-        pod_yml = KubePodYML(name=process.name)
-        container_yml = KubeContainerYML(process)
-        pod_yml.add_container(container_yml)
-        return pod_yml
-
     def add_label(self, key, val):
         self.data.metadata.labels[key] = val
 
     def add_labels(self, **kwargs):
-        for k in kwargs:
+        for k, v in kwargs.items():
             self.data['metadata']['labels'][k] = v
 
     def restart_policy(self, policy):
