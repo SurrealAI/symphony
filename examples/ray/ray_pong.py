@@ -77,6 +77,7 @@ def policy_backward(eph, epx, epdlogp, model):
     return {"W1": dW1, "W2": dW2}
 
 
+# @ray.remote(resources={'agents': 1})
 @ray.remote
 class PongEnv(object):
     def __init__(self):
@@ -87,7 +88,12 @@ class PongEnv(object):
         # probably need to do it from the command line (so it happens before
         # numpy is imported).
         os.environ["MKL_NUM_THREADS"] = "1"
+        os.environ["OPENBLAS_NUM_THREADS"] = "1"
         self.env = gym.make("Pong-v0")
+        # will show in /tmp/raylogs/*.out if ray.init(redirect_worker_output=True)
+        # assert 'SYMPH_RAY_ID' in os.environ, 'master node should not have agent scheduled'
+        # print('WORKER ID', os.environ['SYMPH_RAY_ID'], 'IP', ray.services.get_node_ip_address())
+        print('WORKER IP', ray.services.get_node_ip_address())
 
     def compute_gradient(self, model):
         # Reset the game.
@@ -143,18 +149,16 @@ class PongEnv(object):
 
 
 if __name__ == "__main__":
+    init_master_node(redirect_worker_output=True)
+
     parser = argparse.ArgumentParser(description="Train an RL agent on Pong.")
-    parser.add_argument("--batch-size", default=10, type=int,
+    parser.add_argument("--batch-size", default=32, type=int,
                         help="The number of rollouts to do per batch.")
-    parser.add_argument("--redis-address", default=None, type=str,
-                        help="The Redis address of the cluster.")
     parser.add_argument("--iterations", default=-1, type=int,
                         help="The number of model updates to perform. By "
                              "default, training will not terminate.")
     args = parser.parse_args()
     batch_size = args.batch_size
-
-    ray.init(redis_address=args.redis_address, redirect_output=True)
 
     # Run the reinforcement learning.
 

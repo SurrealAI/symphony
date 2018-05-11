@@ -1,6 +1,6 @@
 FROM us.gcr.io/surreal-dev-188523/surreal-cpu:latest
 
-RUN pip install ray benedict
+RUN pip install ray benedict gym[atari]
 
 # for weird Ray command encoding issue
 ENV LC_ALL C.UTF-8

@@ -33,7 +33,7 @@ resource_str = os.environ['SYMPH_RAY_RESOURCE']
 
 # must be a valid JSON string
 resources = json.loads(resource_str)
-print('requested resources:', resources)
+print('tagged resources:', resources)
 
 # try starting ray connection and loop until success
 success = False
@@ -51,9 +51,12 @@ while not success and trials < MAX_TRIALS:
     exitcode = proc.returncode
     success = exitcode == 0
     if not success:
-        print_err('Trial #{}: ray init failure exit code {}'
-                  .format(trials, exitcode))
-        print_err('retry ...\n\n\n')
+        print_err(
+            '\n', '=' * 10,
+            'Trial #{}: ray init failure exit code {}'.format(trials, exitcode),
+            '='*10
+        )
+        print_err('retry ...\n\n')
         time.sleep(min(MAX_SLEEP, current_sleep))
         current_sleep *= 1.5
     trials += 1
