@@ -79,6 +79,12 @@ class KubeProcessSpec(ProcessSpec):
     def mount_git_repo(self, repository, revision, mount_path, name=None):
         self.container_yml.mount_git_repo(repository, revision, mount_path, name)
 
+    def mount_host_path(self, path, mount_path, hostpath_type='', name=None):
+        self.container_yml.mount_host_path(path, mount_path, hostpath_type, name)
+
+    def mount_empty_dir(self, name, memory, mount_path):
+        self.container_yml.mount_empty_dir(mount_path, memory, name)
+
     def resource_request(self, cpu=None, memory=None):
         self.container_yml.resource_request(cpu, memory)
 
