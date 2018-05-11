@@ -213,7 +213,7 @@ class DockerBuilder:
         if target_path.exists():
             if force_update:
                 self.print("[Info] Removing cached files at {}".format(target_path))
-                shutil.rmtree(target_path)
+                shutil.rmtree(str(target_path))
             else:
                 self.print("[Info] Using cached files at {}".format(target_path))
                 return
