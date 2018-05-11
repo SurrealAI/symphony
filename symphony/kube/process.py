@@ -59,8 +59,9 @@ class KubeProcessSpec(ProcessSpec):
 
     def set_args(self, args):
         if not isinstance(args, list):
-            print_err('[Warning] args {} for KubernetesProcess {} must be a list'.format(args, self.name))
+            print_err('[Warning] args {} for KubernetesProcess {} should be a list'.format(args, self.name))
             args = [args]
+        args = list(map(str, args))
         self.container_yml.set_args(args)
 
     def set_env(self, name, value):

@@ -40,7 +40,7 @@ class KubeService(KubeConfigYML):
 
 class KubeIntraClusterService(KubeService):
     def __init__(self, name, port):
-        super().__init__()
+        super().__init__(name)
         self.name = name
         self.port = port
         self.data = BeneDict({
@@ -60,7 +60,7 @@ class KubeIntraClusterService(KubeService):
 
 class KubeCloudExternelService(KubeService):
     def __init__(self, name, port):
-        super().__init__()
+        super().__init__(name)
         self.name = name
         self.port = port
         self.data = BeneDict({

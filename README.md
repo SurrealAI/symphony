@@ -2,6 +2,7 @@
 Symphony aims to ease the process of launching and monitoring multi-process / multi-node computation tasks. It provides a simple abstraction for launching multiple processes in a centralized place and supports multiple backends (e.g. tmux and kubernetes). It also provides a set of essential commandline interfaces to monitor the status of the processes involved.
 
 # Index
+[kubernetes](docs/kubernetes.md)
 
 # Installation
 
@@ -16,7 +17,7 @@ Symphony provides convenient functionalities for deploying such distributed task
 
 # Processes, Experiments & Clusters
 Symphony allows you to manage multiple experiments where each experiment contains processes that communicates with each other through network. How to run an experiment is declared by code and then launched on a `Cluster`, which is an abstraction for where you run the experiment. It can be a tmux server on your local machine or a remote Kubernetes cluster. Here is an example of a RL experiment. (# TODO: make sure that engine imports everything correctly, we don't want people to remember to import kube)
-```python
+```python(TODO: update to reflect the latest tmux api)
 # Run experiment.py
 from symphony.engine import Cluster
 

@@ -1,4 +1,5 @@
 import os
+import time
 import libtmux
 from libtmux.exc import LibTmuxException
 from symphony.engine import Cluster
@@ -6,7 +7,7 @@ from symphony.tmux.experiment import TmuxExperimentSpec
 from symphony.errors import *
 
 
-_SERVER_NAME = '__symphony__'
+_SERVER_NAME = 'default'
 _DEFAULT_WINDOW = '__main__'
 
 
@@ -18,12 +19,13 @@ def _logger(verbose):
 
 
 class TmuxCluster(Cluster):
-    def __init__(self, server_name=_SERVER_NAME):
+    def __init__(self, server_name=None):
         """
         Args:
             server_name: name of the new Tmux server (i.e. socket_name)
         """
-        self._socket_name = server_name
+        super().__init__() # just for linter's happiness
+        self._socket_name = server_name or _SERVER_NAME
         # Use /dev/null as config to ignore all user-specific settings.
         self._tmux = libtmux.Server(socket_name=self._socket_name,
                                     config_file='/dev/null')
@@ -33,11 +35,9 @@ class TmuxCluster(Cluster):
         try:
             sess = self._tmux.find_where({'session_name': session_name})
         except LibTmuxException:
-            raise ValueError(
-                    'Experiment "{}" does not exist'.format(session_name))
+            raise ValueError('Experiment "{}" does not exist'.format(session_name))
         if not sess:
-            raise ValueError(
-                    'Experiment "{}" does not exist'.format(session_name))
+            raise ValueError('Experiment "{}" does not exist'.format(session_name))
         return sess
 
     def _get_window_name(self, process_name, group_name):
@@ -64,6 +64,38 @@ class TmuxCluster(Cluster):
             pass
         return self._tmux.new_session(session_name)
 
+    def _create_process(self, sess, process, preamble_cmds, process_group=None,
+                        timeout=4):
+        if process_group:
+            window_name = ':'.join((process_group.name, process.name))
+        else:
+            window_name = process.name
+        window = sess.new_window(window_name=window_name)
+
+        # Retry loop to make sure we run process commands after
+        # shell starts (heuristically checked by ensuring pane has
+        # some output in the buffer).
+        env_cmds = ['export {}={}'.format(k,v) for k,v in process.env.items()]
+        cmds = env_cmds + preamble_cmds + process.cmds
+        if cmds:
+            start_time = time.time()
+            pane = window.attached_pane
+            while time.time() < start_time + timeout:
+                stdout = pane.cmd('capture-pane', '-p').stdout
+                if stdout:
+                    for cmd in cmds:
+                        pane.send_keys(cmd)
+                    break
+                time.sleep(0.2)
+
+    def _send_cmd(self, experiment_name, process, process_group_name=None):
+        window = self._get_window(experiment_name, process.name,
+                                  group_name=process_group_name)
+        pane = window.attached_pane
+        if process.cmds:
+            for cmd in process.cmds:
+                pane.send_keys(cmd)
+
     # ===================== Launch API =======================
     def new_experiment(self, *args, **kwargs):
         return TmuxExperimentSpec(*args, **kwargs)
@@ -72,8 +104,10 @@ class TmuxCluster(Cluster):
         _log = _logger(dry_run)
         assert isinstance(spec, TmuxExperimentSpec)
 
+        spec.compile()
+
         # Create a new session for the given Experiment.
-        if not self._dry_run:
+        if not dry_run:
             sess = self._new_session(spec.name)
             # Change the name of the default window.
             sess.windows[0].rename_window(_DEFAULT_WINDOW)
@@ -81,24 +115,19 @@ class TmuxCluster(Cluster):
 
         # Create a window for each process group and lone process.
         for pg in spec.list_process_groups():
+            preamble_cmds = spec.preamble_cmds + pg.preamble_cmds
             _log(' --> Creating process group', pg.name)
             for p in pg.list_processes():
                 window_name = ':'.join((pg.name, p.name))
-                if not self._dry_run:
-                    window = sess.new_window(window_name=window_name)
+                if not dry_run:
+                    self._create_process(sess, p, preamble_cmds,
+                                         process_group=pg)
                 _log(' --> --> Created process', window_name)
 
-        for p in spec.list_lone_processes():
-            if not self._dry_run:
-                window = sess.new_window(window_name=p.name)
-                pane = window.attached_pane
+        for p in spec.list_processes():
+            if not dry_run:
+                self._create_process(sess, p, spec.preamble_cmds)
             _log(' --> Created process', p.name)
-
-    def _exec_process(self, window, process):
-        pane = window.attached_pane
-        if process.cmds:
-            for cmd in cmds:
-                pane.send_keys(cmd)
 
     def launch_batch(self, experiment_specs):
         for exp in experiment_specs:
@@ -207,16 +236,21 @@ class TmuxCluster(Cluster):
                 'status': 'live',
         }
 
-    def get_log(self, experiment_name, process_name, process_group_name=None,
-                   history=None):
-        """
-        Args:
-            length: number of lines to be captured.
-        """
+    def get_log(self, experiment_name, process_name, process_group=None,
+                follow=False, since=None, tail=None, print_logs=False):
+        if follow:
+            raise ValueError(
+                    '[Error] "follow" is not supported for tmux backend')
+        if since:
+            raise ValueError(
+                    '[Error] "since" is not supported for tmux backend')
         window = self._get_window(
-                experiment_name, window_name, group_name=process_group_name)
+                experiment_name, process_name, group_name=process_group)
         pane = window.attached_pane
         command = ['capture-pane', '-p']
-        if history:
-            command.extend(['-S', str(-abs(history))])
-        return pane.cmd(*command).stdout
+        if tail:
+            command.extend(['-S', str(-abs(tail))])
+        stdout = pane.cmd(*command).stdout
+        if print_logs:
+            print('\n'.join(stdout))
+        return stdout
