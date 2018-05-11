@@ -10,10 +10,3 @@ _push:
 
 push: build _push
 
-
-kube:
-	python symph_launcher.py
-	sleep 2
-	kurreal process
-
-all: push kube

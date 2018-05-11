@@ -1,6 +1,6 @@
 #!/bin/bash
 
 make push
-python symph_launcher.py $@
-sleep 2
-kurreal process
+python kube_launcher.py $@
+sleep 15
+kurreal list-processes
