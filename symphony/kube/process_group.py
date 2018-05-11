@@ -1,7 +1,7 @@
 from symphony.spec import ProcessGroupSpec
 from symphony.utils.common import sanitize_name_kubernetes, strip_repository_name
 from .process import KubeProcessSpec
-from .builder import KubePodYML, KubeNFSVolume, KubeGitVolume
+from .builder import KubePodYML, KubeNFSVolume, KubeGitVolume, KubeHostPathVolume, KubeEmptyDirVolume
 
 
 class KubeProcessGroupSpec(ProcessGroupSpec):
@@ -68,6 +68,18 @@ class KubeProcessGroupSpec(ProcessGroupSpec):
         if name is None:
             name = strip_repository_name(repository)
         v = KubeGitVolume(name=name,repository=repository,revision=revision)
+        for process in self.list_processes():
+            process.mount_volume(v, mount_path)
+
+    def mount_host_path(self, path, mount_path, hostpath_type='', name=None):
+        if name is None:
+            name = path.split('/')[-1]
+        v = KubeHostPathVolume(name=name, path=path, hostpath_type=hostpath_type)
+        for process in self.list_processes():
+            process.mount_volume(v, mount_path)
+
+    def mount_empty_dir(self, name, memory, mount_path):
+        v = KubeEmptyDirVolume(name, memory)
         for process in self.list_processes():
             process.mount_volume(v, mount_path)
 

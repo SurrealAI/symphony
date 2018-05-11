@@ -101,6 +101,8 @@ class KubeVolume(object):
             return KubeGitVolume.load(di)
         elif di['type'] == 'KubeHostPathVolume':
             return KubeHostPathVolume.load(di)
+        elif di['type'] == 'KubeEmptyDirVolume':
+            return KubeEmptyDirVolume.load(di)
 
     def save(self):
         raise NotImplementedError
@@ -201,6 +203,34 @@ class KubeGitVolume(KubeVolume):
         }
 
 
+class KubeEmptyDirVolume(KubeVolume):
+    def __init__(self, name, memory=False):
+        super().__init__(name)
+        self.memory = memory
+
+    def pod_spec(self):
+        """
+            Returns a spec to fall under Pod: spec:
+        """
+        return BeneDict({
+            'name': self.name,
+            'emptyDir': {
+                'memory': self.memory,
+            }
+        })
+
+    @classmethod
+    def load(cls, di):
+        return cls(di['name'], di['memory'])
+
+    def save(self):
+        return {
+            'name': self.name,
+            'memory': self.memory,
+            'type': 'KubeEmptyDirVolume',
+        }
+
+
 class KubeContainerYML(KubeConfigYML):
     def __init__(self, name, image):
         super().__init__()
@@ -262,7 +292,17 @@ class KubeContainerYML(KubeConfigYML):
     def mount_git_repo(self, repository, revision, mount_path, name=None):
         if name is None:
             name = strip_repository_name(repository)
-        v = KubeGitVolume(name=name,repository=repository,revision=revision)
+        v = KubeGitVolume(name=name, repository=repository, revision=revision)
+        self.mount_volume(v, mount_path)
+
+    def mount_host_path(self, path, mount_path, hostpath_type='', name=None):
+        if name is None:
+            name = path.split('/')[-1]
+        v = KubeHostPathVolume(name=name, path=path, hostpath_type=hostpath_type)
+        self.mount_volume(v, mount_path)
+
+    def mount_empty_dir(self, name, memory, mount_path):
+        v = KubeEmptyDirVolume(name=name, memory=memory)
         self.mount_volume(v, mount_path)
 
     def resource_request(self, cpu=None, memory=None):

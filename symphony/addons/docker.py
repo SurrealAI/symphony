@@ -7,7 +7,39 @@ import re
 from os.path import expanduser
 from pathlib import Path
 import docker
+from symphony.utils.common import print_err
 
+
+class DockerRecordMaster:
+    """
+    Manages docker information, returns docker builder
+    """
+    def __init__(self, configs=None):
+        self.settings = {}
+        if configs is not None:
+            self.load_all(configs)
+
+    def load_all(self, li):
+        """
+        load all configs in list li
+        """
+        for di in li:
+            self.add_config(di)
+
+    def add_config(self, di):
+        """
+        Add a setting to the storage
+        """
+        name = di['name']
+        if name in self.settings:
+            print_err('[Warning] Overwriting docker build setting for {}'.format(name))
+        self.settings[name] = DockerBuilder.format_docker_build_settings(di)
+
+    def get(self, name):
+        """
+        Return a DockerBuilder instance under name @name
+        """
+        return DockerBuilder(**(self.settings[name]))
 
 
 class DockerBuilder:
@@ -34,6 +66,31 @@ class DockerBuilder:
         self.verbose = verbose
 
         self.client = docker.APIClient()
+
+    @classmethod
+    def format_docker_build_settings(cls, di):
+        """
+        Formats di so it can intialize a DockerBuilderInstance
+        """
+        if 'name' not in di:
+            raise ValueError('[Error] Every build setting must have a name')
+        name = di['name']
+        if 'temp_directory' not in di:
+            print_err('[Warning] Setting build directory of {} to /tmp/symphony'.format(name))
+            di['temp_directory'] = '/tmp/symphony'
+        if 'context_directories' not in di:
+            print_err('[Warning] {} has no dependent files'.format(name))
+            di['context_directories'] = []
+        if 'dockerfile' not in di:
+            raise ValueError('[Error] Must provide a dockerfile for build setting {}'.format(name))
+        config = {
+            'temp_directory': str(di['temp_directory']),
+            'context_directories': list(di['context_directories']),
+            'dockerfile': str(di['dockerfile']),
+        }
+        if 'verbose' in di:
+            config['verbose'] = di['verbose']
+        return config
 
     def configure_context(self, context_directories):
         """
