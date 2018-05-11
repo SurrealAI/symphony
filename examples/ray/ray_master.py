@@ -53,20 +53,25 @@ def run_get_ips():
     return list(set(ray.get([f_anywhere.remote() for _ in range(1000)])))
 
 
-@ray.remote(resources={'tag0': 5})
+def f0():
+    time.sleep(0.02)
+    return ray.services.get_node_ip_address()
+def f1():
+    time.sleep(0.02)
+    return ray.services.get_node_ip_address()
 def f2():
     time.sleep(0.02)
     return ray.services.get_node_ip_address()
 
-@ray.remote(resources={'tag1': 5})
 def f3():
     time.sleep(0.02)
     return ray.services.get_node_ip_address()
 
 def run_resource_alloc():
     # force schedule to each of 4 workers
-    funcs = [lambda i=i: schedule_to_node(get_ip, i) for i in range(4)]
-    return ray.get([func().remote() for func in funcs])
+    # funcs = [schedule_to_node(get_ip, i) for i in range(4)]
+    funcs = [schedule_to_node(ff, i) for i, ff in enumerate([f0,f1,f2,f3])]
+    return ray.get([func.remote() for func in funcs])
 
 
 while True:
