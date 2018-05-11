@@ -5,7 +5,7 @@ from .builder import KubeContainerYML, KubePodYML
 
 class KubeProcessSpec(ProcessSpec):
     def __init__(self, name, *, container_image=None, standalone=True,
-                 command=None, args=None, **kwargs):
+                 command=None, args=None, env=None, **kwargs):
         name = sanitize_name_kubernetes(name)
         super().__init__(name)
         self.container_image = container_image
@@ -18,6 +18,9 @@ class KubeProcessSpec(ProcessSpec):
             self.set_command(command)
         if args is not None:
             self.set_args(args)
+        if env is not None:
+            assert isinstance(env, dict)
+            self.set_envs(env)
 
     def _set_process_group(self, process_group):
         if self.standalone:
