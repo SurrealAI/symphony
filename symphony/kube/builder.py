@@ -78,7 +78,16 @@ class KubeCloudExternelService(KubeService):
         })
 
 
-class KubeVolume(object):
+class _KubeVolumeRegistry(type):
+    registry = {}
+
+    def __new__(cls, name, bases, class_dict):
+        cls = type.__new__(cls, name, bases, class_dict)
+        _KubeVolumeRegistry.registry[cls.__name__] = cls
+        return cls
+
+
+class KubeVolume(metaclass=_KubeVolumeRegistry):
     """
     Simple wrapper for some volumes that we are using
     https://kubernetes.io/docs/concepts/storage/volumes/#types-of-volumes
@@ -95,14 +104,12 @@ class KubeVolume(object):
 
     @classmethod
     def load(cls, di):
-        if di['type'] == 'KubeNFSVolume':
-            return KubeNFSVolume.load(di)
-        elif di['type'] == 'KubeGitVolume':
-            return KubeGitVolume.load(di)
-        elif di['type'] == 'KubeHostPathVolume':
-            return KubeHostPathVolume.load(di)
-        elif di['type'] == 'KubeEmptyDirVolume':
-            return KubeEmptyDirVolume.load(di)
+        assert 'type' in di
+        volume_cls_name = di['type']
+        assert volume_cls_name in _KubeVolumeRegistry.registry, \
+            'volume type not found in KubeVolumeRegistry'
+        volume_cls = _KubeVolumeRegistry.registry[volume_cls_name]
+        return volume_cls.load(di)
 
     def save(self):
         raise NotImplementedError
