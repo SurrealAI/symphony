@@ -78,10 +78,17 @@ class KubeProcessGroupSpec(ProcessGroupSpec):
         for process in self.list_processes():
             process.mount_volume(v, mount_path)
 
-    def mount_empty_dir(self, name, memory, mount_path):
-        v = KubeEmptyDirVolume(name, memory)
+    def mount_empty_dir(self, name, use_memory, mount_path):
+        v = KubeEmptyDirVolume(name, use_memory)
         for process in self.list_processes():
             process.mount_volume(v, mount_path)
+
+    def mount_shared_memory(self, name='devshm'):
+        """
+        https://stackoverflow.com/questions/46085748/define-size-for-dev-shm-on-container-engine/46434614#46434614
+        """
+        for process in self.list_processes():
+            process.mount_shared_memory(name=name)
 
     def set_env(self, name, value):
         for process in self.list_processes():

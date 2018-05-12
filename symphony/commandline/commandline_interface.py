@@ -272,7 +272,7 @@ class SymphonyParser(object):
             if is_exact and len(proc_pairs) == 1:
                 return proc_pairs[0]
             return self._interactive_find(proc_pairs,
-                  'Process "{}" in Experiment "{}"'.format(proc_path, exp_name))
+                                          'Process "{}"'.format(proc_path))
 
     def _interactive_find(self, matches, error_message):
         """
