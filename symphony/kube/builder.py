@@ -78,7 +78,16 @@ class KubeCloudExternelService(KubeService):
         })
 
 
-class KubeVolume(object):
+class _KubeVolumeRegistry(type):
+    registry = {}
+
+    def __new__(cls, name, bases, class_dict):
+        cls = type.__new__(cls, name, bases, class_dict)
+        _KubeVolumeRegistry.registry[cls.__name__] = cls
+        return cls
+
+
+class KubeVolume(metaclass=_KubeVolumeRegistry):
     """
     Simple wrapper for some volumes that we are using
     https://kubernetes.io/docs/concepts/storage/volumes/#types-of-volumes
@@ -94,15 +103,17 @@ class KubeVolume(object):
         # return {'name': self.name}
 
     @classmethod
-    def load(cls, di):
-        if di['type'] == 'KubeNFSVolume':
-            return KubeNFSVolume.load(di)
-        elif di['type'] == 'KubeGitVolume':
-            return KubeGitVolume.load(di)
-        elif di['type'] == 'KubeHostPathVolume':
-            return KubeHostPathVolume.load(di)
-        elif di['type'] == 'KubeEmptyDirVolume':
-            return KubeEmptyDirVolume.load(di)
+    def load(cls, config):
+        """
+        config is a dict of "type": "KubeVolumeClass" and init kwargs
+        """
+        assert 'type' in config
+        config = config.copy()
+        volume_cls_name = config.pop('type')
+        assert volume_cls_name in _KubeVolumeRegistry.registry, \
+            'volume type not found in KubeVolumeRegistry'
+        volume_cls = _KubeVolumeRegistry.registry[volume_cls_name]
+        return volume_cls(**config)
 
     def save(self):
         raise NotImplementedError
@@ -130,16 +141,12 @@ class KubeHostPathVolume(KubeVolume):
                 },
             })
 
-    @classmethod
-    def load(cls, di):
-        return cls(di['name'], di['hostpath_type'], di['path'])
-
     def save(self):
         return {
             'name': self.name,
             'hostpath_type': self.hostpath_type,
             'path': self.path,
-            'type': 'KubeHostPathVolume'
+            'type': self.__class__.__name__
         }
 
 
@@ -161,15 +168,13 @@ class KubeNFSVolume(KubeVolume):
             }
         })
 
-    @classmethod
-    def load(cls, di):
-        return cls(di['name'], di['server'], di['path'])
-
     def save(self):
-        return {'name': self.name,
-                'server': self.server,
-                'path': self.path,
-                'type': 'KubeNFSVolume'}
+        return {
+            'name': self.name,
+            'server': self.server,
+            'path': self.path,
+            'type': self.__class__.__name__
+        }
 
 
 class KubeGitVolume(KubeVolume):
@@ -190,44 +195,41 @@ class KubeGitVolume(KubeVolume):
             }
         })
 
-    @classmethod
-    def load(cls, di):
-        return cls(di['name'], di['repository'], di['revision'])
-
     def save(self):
         return {
             'name': self.name,
             'repository': self.repository,
             'revision': self.revision,
-            'type': 'KubeGitVolume',
+            'type': self.__class__.__name__
         }
 
 
 class KubeEmptyDirVolume(KubeVolume):
-    def __init__(self, name, memory=False):
+    def __init__(self, name, use_memory=False):
+        """
+        https://stackoverflow.com/questions/46085748/define-size-for-dev-shm-on-container-engine/46434614#46434614
+        """
         super().__init__(name)
-        self.memory = memory
+        self.use_memory = use_memory
 
     def pod_spec(self):
         """
             Returns a spec to fall under Pod: spec:
         """
+        if self.use_memory:
+            emptyDir_config = {'medium': 'Memory'}
+        else:
+            emptyDir_config = {}
         return BeneDict({
             'name': self.name,
-            'emptyDir': {
-                'memory': self.memory,
-            }
+            'emptyDir': emptyDir_config
         })
-
-    @classmethod
-    def load(cls, di):
-        return cls(di['name'], di['memory'])
 
     def save(self):
         return {
             'name': self.name,
-            'memory': self.memory,
-            'type': 'KubeEmptyDirVolume',
+            'use_memory': self.use_memory,
+            'type': self.__class__.__name__
         }
 
 
@@ -301,9 +303,17 @@ class KubeContainerYML(KubeConfigYML):
         v = KubeHostPathVolume(name=name, path=path, hostpath_type=hostpath_type)
         self.mount_volume(v, mount_path)
 
-    def mount_empty_dir(self, name, memory, mount_path):
-        v = KubeEmptyDirVolume(name=name, memory=memory)
+    def mount_empty_dir(self, name, use_memory, mount_path):
+        v = KubeEmptyDirVolume(name=name, use_memory=use_memory)
         self.mount_volume(v, mount_path)
+
+    def mount_shared_memory(self, name='devshm'):
+        """
+        Useful for applications like Ray that requires large shared memory
+        https://stackoverflow.com/questions/46085748/define-size-for-dev-shm-on-container-engine/46434614#46434614
+        """
+        v = KubeEmptyDirVolume(name=name, use_memory=True)
+        self.mount_volume(v, '/dev/shm')
 
     def resource_request(self, cpu=None, memory=None):
         if cpu is not None:

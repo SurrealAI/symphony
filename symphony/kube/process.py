@@ -5,7 +5,7 @@ from .builder import KubeContainerYML, KubePodYML
 
 class KubeProcessSpec(ProcessSpec):
     def __init__(self, name, *, container_image=None, standalone=True,
-                 command=None, args=None, **kwargs):
+                 command=None, args=None, env=None, **kwargs):
         name = sanitize_name_kubernetes(name)
         super().__init__(name)
         self.container_image = container_image
@@ -18,6 +18,9 @@ class KubeProcessSpec(ProcessSpec):
             self.set_command(command)
         if args is not None:
             self.set_args(args)
+        if env is not None:
+            assert isinstance(env, dict)
+            self.set_envs(env)
 
     def _set_process_group(self, process_group):
         if self.standalone:
@@ -82,8 +85,14 @@ class KubeProcessSpec(ProcessSpec):
     def mount_host_path(self, path, mount_path, hostpath_type='', name=None):
         self.container_yml.mount_host_path(path, mount_path, hostpath_type, name)
 
-    def mount_empty_dir(self, name, memory, mount_path):
-        self.container_yml.mount_empty_dir(mount_path, memory, name)
+    def mount_empty_dir(self, name, use_memory, mount_path):
+        self.container_yml.mount_empty_dir(mount_path, use_memory, name)
+
+    def mount_shared_memory(self, name='devshm'):
+        """
+        https://stackoverflow.com/questions/46085748/define-size-for-dev-shm-on-container-engine/46434614#46434614
+        """
+        self.container_yml.mount_shared_memory(name=name)
 
     def resource_request(self, cpu=None, memory=None):
         self.container_yml.resource_request(cpu, memory)

@@ -1,9 +1,13 @@
 import argparse
 from symphony.engine import Cluster
 from pprint import pprint
+import json
 
 
-USE_SURREAL = 0
+USE_SURREAL = 1
+MASTER_SCRIPT = 'ray_pong.py'
+MASTER_ADDR = 'master-redis'
+LIMIT_NUMPY = True
 
 
 parser = argparse.ArgumentParser()
@@ -19,26 +23,43 @@ cluster = Cluster.new('kube') # cluster is a TmuxCluster
 exp = cluster.new_experiment(args.name, port_range=[7070]) # exp is a TmuxExperimentSpec
 master = exp.new_process(
     'master',
-    args=['--py', 'ray_master.py'],
-    container_image=cpu_image
+    args=['--py', MASTER_SCRIPT],
+    container_image=cpu_image,
+    env={'SYMPH_RAY_ID': 'master'}
 )
-master.binds('redis-server')
-if USE_SURREAL:
-    master.node_selector(key='surreal-node', value='nonagent-cpu')
-    master.resource_request(cpu=7)
+master.binds(MASTER_ADDR)
+master.mount_shared_memory()
 
+if USE_SURREAL:
+    # master is just a driver that doesn't run code
+    master.node_selector(key='surreal-node', value='agent')
+    master.resource_request(cpu=1.5)
+
+
+# DEMO ONLY otherwise won't be much faster than serial version
+limit_numpy_env = {
+    "MKL_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+}
 
 for i in range(args.workers):
+    env = {'SYMPH_RAY_ID': str(i),
+           'SYMPH_RAY_RESOURCE': json.dumps({'mujoco': 15})}
+    env.update(limit_numpy_env)
+
     worker = exp.new_process(
         'worker{}'.format(i),
         container_image=cpu_image,
         # args=['--bash', 'ray/ray_worker.sh', i]
-        args=['--py', 'ray_worker.py', i]
+        args=['--py', 'ray_satellite.py'],
+        env=env
     )
-    worker.connects('redis-server')
+    worker.connects(MASTER_ADDR)
+    worker.mount_shared_memory()
+
     if USE_SURREAL:
-        worker.node_selector(key='surreal-node', value='agent')
-        worker.resource_request(cpu=1.5)
+        worker.node_selector(key='surreal-node', value='nonagent-cpu')
+        worker.resource_request(cpu=7.5)
 
 
 for proc in exp.list_processes():

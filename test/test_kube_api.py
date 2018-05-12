@@ -40,3 +40,10 @@
 # # t = cluster.list_topology(exp)
 # # print(t)
 
+
+from symphony.kube.builder import *
+
+
+v=KubeHostPathVolume('myname', 'mypath', 'myhost')
+d = v.save()
+print(KubeVolume.load(d).save())

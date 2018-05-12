@@ -269,7 +269,7 @@ class KubeCluster(Cluster):
             out, err, retcode = runner.run_verbose(
                 cmd,
                 print_out=print_logs,
-                raise_on_error=True
+                raise_on_error=False
             )
             if retcode != 0:
                 return ''
