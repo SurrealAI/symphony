@@ -44,7 +44,7 @@ current_sleep = 2.
 
 while not success and trials < MAX_TRIALS:
     proc = subprocess.run(
-        'ray start --redis-address=$SYMPH_MASTER_REDIS_ADDR --resources={}'
+        'ray start --redis-address=$SYMPH_MASTER_REDIS_ADDR --resources={} --plasma-directory /dev/shm'
         .format(shlex.quote(resource_str)),
         shell=True
     )

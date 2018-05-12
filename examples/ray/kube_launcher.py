@@ -24,9 +24,12 @@ exp = cluster.new_experiment(args.name, port_range=[7070]) # exp is a TmuxExperi
 master = exp.new_process(
     'master',
     args=['--py', MASTER_SCRIPT],
-    container_image=cpu_image
+    container_image=cpu_image,
+    env={'SYMPH_RAY_ID': 'master'}
 )
 master.binds(MASTER_ADDR)
+master.mount_shared_memory()
+
 if USE_SURREAL:
     # master is just a driver that doesn't run code
     master.node_selector(key='surreal-node', value='agent')
@@ -41,7 +44,7 @@ limit_numpy_env = {
 
 for i in range(args.workers):
     env = {'SYMPH_RAY_ID': str(i),
-           'SYMPH_RAY_RESOURCE': json.dumps({'agents': 8})}
+           'SYMPH_RAY_RESOURCE': json.dumps({'mujoco': 15})}
     env.update(limit_numpy_env)
 
     worker = exp.new_process(
@@ -52,6 +55,8 @@ for i in range(args.workers):
         env=env
     )
     worker.connects(MASTER_ADDR)
+    worker.mount_shared_memory()
+
     if USE_SURREAL:
         worker.node_selector(key='surreal-node', value='nonagent-cpu')
         worker.resource_request(cpu=7.5)

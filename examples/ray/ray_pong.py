@@ -77,8 +77,8 @@ def policy_backward(eph, epx, epdlogp, model):
     return {"W1": dW1, "W2": dW2}
 
 
-# @ray.remote(resources={'agents': 1})
-@ray.remote
+@ray.remote(resources={'mujoco': 3})
+# @ray.remote(num_cpus=1)
 class PongEnv(object):
     def __init__(self):
         # Tell numpy to only use one core. If we don't do this, each actor may
@@ -91,9 +91,8 @@ class PongEnv(object):
         os.environ["OPENBLAS_NUM_THREADS"] = "1"
         self.env = gym.make("Pong-v0")
         # will show in /tmp/raylogs/*.out if ray.init(redirect_worker_output=True)
-        # assert 'SYMPH_RAY_ID' in os.environ, 'master node should not have agent scheduled'
-        # print('WORKER ID', os.environ['SYMPH_RAY_ID'], 'IP', ray.services.get_node_ip_address())
-        print('WORKER IP', ray.services.get_node_ip_address())
+        ray_id = os.environ['SYMPH_RAY_ID']
+        print('SYMPH ID', ray_id, 'IP', ray.services.get_node_ip_address())
 
     def compute_gradient(self, model):
         # Reset the game.
@@ -149,16 +148,21 @@ class PongEnv(object):
 
 
 if __name__ == "__main__":
-    init_master_node(redirect_worker_output=True)
+    init_master_node(resources={'mujoco':0}, redirect_output=True, redirect_worker_output=True)
+
+    print('='*40, 'AFTER INIT_MASTER', '='*40)
+    from pprint import pprint
+    pprint(ray.global_state.client_table())
 
     parser = argparse.ArgumentParser(description="Train an RL agent on Pong.")
-    parser.add_argument("--batch-size", default=32, type=int,
+    parser.add_argument("--batch-size", default=18, type=int,
                         help="The number of rollouts to do per batch.")
     parser.add_argument("--iterations", default=-1, type=int,
                         help="The number of model updates to perform. By "
                              "default, training will not terminate.")
     args = parser.parse_args()
     batch_size = args.batch_size
+    print('BATCH_SIZE', batch_size)
 
     # Run the reinforcement learning.
 
