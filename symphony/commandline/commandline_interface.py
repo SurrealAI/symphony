@@ -288,7 +288,7 @@ class SymphonyParser(object):
             sys.exit(1)
         elif len(matches) == 1:
             match = matches[0]
-            print_err('[Warning] No exact match. Fuzzy match only finds one candidate: "{}"'
+            print_err('[Warning] No exact match. Fuzzy match only finds one candidate: {}'
                       .format(match))
             return match
         prompt = '\n'.join(['{}) {}'.format(i, n) for i, n in enumerate(matches)])

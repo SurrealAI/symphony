@@ -1,14 +1,18 @@
 # This code is copied and adapted from Andrej Karpathy's code for learning to
 # play Pong https://gist.github.com/karpathy/a4166c7fe253700972fcbc77e4ea32c5.
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import argparse
 import numpy as np
 import os
 import ray
 import time
 import gym
-from symphony.ray import *
 
+# from ray_utils import flush_redis_unsafe
 
 # Define some hyperparameters.
 
@@ -76,8 +80,8 @@ def policy_backward(eph, epx, epdlogp, model):
     return {"W1": dW1, "W2": dW2}
 
 
-@ray.remote(resources={'mujoco': 3})
-# @ray.remote(num_cpus=1)
+# @ray.remote(resources={'mujoco': 3})
+@ray.remote(num_cpus=2)
 class PongEnv(object):
     def __init__(self):
         # Tell numpy to only use one core. If we don't do this, each actor may
@@ -87,10 +91,8 @@ class PongEnv(object):
         # probably need to do it from the command line (so it happens before
         # numpy is imported).
         os.environ["MKL_NUM_THREADS"] = "1"
-        os.environ["OPENBLAS_NUM_THREADS"] = "1"
         self.env = gym.make("Pong-v0")
-        # will show in /tmp/raylogs/*.out if ray.init(redirect_worker_output=True)
-        print('SYMPH ID', ray_id(), 'IP', ray_ip_address())
+        print('My IP:', ray.services.get_node_ip_address())
 
     def compute_gradient(self, model):
         # Reset the game.
@@ -146,21 +148,17 @@ class PongEnv(object):
 
 
 if __name__ == "__main__":
-    ray_init_master_node(redirect_output=True, redirect_worker_output=True)
-
-    print('='*40, 'AFTER INIT_MASTER', '='*40)
-    from pprint import pprint
-    pprint(ray_client_table())
-
     parser = argparse.ArgumentParser(description="Train an RL agent on Pong.")
-    parser.add_argument("--batch-size", default=18, type=int,
+    parser.add_argument("--batch-size", default=8, type=int,
                         help="The number of rollouts to do per batch.")
     parser.add_argument("--iterations", default=-1, type=int,
                         help="The number of model updates to perform. By "
                              "default, training will not terminate.")
     args = parser.parse_args()
     batch_size = args.batch_size
-    print('BATCH_SIZE', batch_size)
+
+    # ray.init(redis_address='localhost:8060', redirect_output=True)
+    ray.init(redis_address='localhost:8060')
 
     # Run the reinforcement learning.
 
@@ -176,6 +174,7 @@ if __name__ == "__main__":
     rmsprop_cache = {k: np.zeros_like(v) for k, v in model.items()}
     actors = [PongEnv.remote() for _ in range(batch_size)]
     iteration = 0
+    print('ACTORS INITIALIZED batch size', batch_size)
     while iteration != args.iterations:
         iteration += 1
         model_id = ray.put(model)
@@ -198,6 +197,7 @@ if __name__ == "__main__":
               "running mean is {}".format(batch_num, batch_size,
                                           end_time - start_time,
                                           running_reward))
+        # flush_redis_unsafe()
         for k, v in model.items():
             g = grad_buffer[k]
             rmsprop_cache[k] = (decay_rate * rmsprop_cache[k] +

@@ -1,11 +1,13 @@
 import argparse
 from symphony.engine import Cluster
-from symphony.ray import *
+from pprint import pprint
+import json
 
 
 USE_SURREAL = 1
 MASTER_SCRIPT = 'ray_pong.py'
-SATELLITE_SCRIPT = 'ray_satellite.py'
+MASTER_ADDR = 'master-redis'
+LIMIT_NUMPY = True
 
 
 parser = argparse.ArgumentParser()
@@ -17,12 +19,15 @@ args = parser.parse_args()
 cpu_image = 'us.gcr.io/surreal-dev-188523/jimfan-cpu:latest'
 gpu_image = 'us.gcr.io/surreal-dev-188523/jimfan-gpu:latest'
 
-cluster = Cluster.new('raykube')
+cluster = Cluster.new('kube') # cluster is a TmuxCluster
 exp = cluster.new_experiment(args.name, port_range=[7070]) # exp is a TmuxExperimentSpec
-master = exp.new_master_process(
-    args=['python', MASTER_SCRIPT],
-    container_image=cpu_image,
+master = exp.new_process(
+    'master',
+    args=['--cmd', 'sleep 1000000000'],
+    container_image=cpu_image
 )
+master.binds(MASTER_ADDR)
+master.mount_shared_memory()
 
 if USE_SURREAL:
     # master is just a driver that doesn't run code
@@ -32,27 +37,34 @@ if USE_SURREAL:
 
 # DEMO ONLY otherwise won't be much faster than serial version
 limit_numpy_env = {
-    "MKL_NUM_THREADS": 1,
-    "OPENBLAS_NUM_THREADS": 1
+    "MKL_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
 }
 
 for i in range(args.workers):
-    satellite = exp.new_satellite_process(
-        id=i,
+    env = {'SYMPH_RAY_ID': str(i),
+           'SYMPH_RAY_RESOURCE': json.dumps({'agents': 8})}
+    env.update(limit_numpy_env)
+
+    worker = exp.new_process(
+        'worker{}'.format(i),
         container_image=cpu_image,
         # args=['--bash', 'ray/ray_worker.sh', i]
-        args=['python', SATELLITE_SCRIPT],
-        resources={'mujoco': 15},
-        env=limit_numpy_env,
+        args=['--cmd', 'sleep 1000000000'],
+        env=env
     )
+    worker.connects(MASTER_ADDR)
+    worker.mount_shared_memory()
 
     if USE_SURREAL:
-        satellite.node_selector(key='surreal-node', value='nonagent-cpu')
-        satellite.resource_request(cpu=7.5)
+        worker.node_selector(key='surreal-node', value='nonagent-cpu')
+        worker.resource_request(cpu=7.5)
 
 
 for proc in exp.list_processes():
     proc.add_toleration(key='surreal', operator='Exists', effect='NoExecute')
 
+
+# pprint(exp.dump_dict())
 
 cluster.launch(exp)

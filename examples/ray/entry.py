@@ -15,11 +15,7 @@ import glob
 import errno
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-i', '--interact', action='store_true', help='start interactive bash')
-parser.add_argument('--cmd', type=str, nargs='+', help='run arbitrary command')
-parser.add_argument('--bash', type=str, nargs='+', help='bash shell script')
-parser.add_argument('--py', type=str, nargs='+', help='python script')
-
+parser.add_argument('cmd', type=str, nargs='+', help='run arbitrary command')
 args = parser.parse_args()
 
 
@@ -65,13 +61,4 @@ def _run_cmd_list(args):
         os.system(' '.join(map(shlex.quote, args)))
 
 
-if args.interact:
-    os.system('bash')
-elif args.cmd:
-    _run_cmd_list(args.cmd)
-elif args.py:
-    _run_cmd_list(['python', '-u'] + args.py)
-elif args.bash:
-    _run_cmd_list(['bash'] + args.bash)
-else:
-    print('No args given to /mylibs/entry.py')
+_run_cmd_list(args.cmd)
