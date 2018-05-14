@@ -148,7 +148,7 @@ class SymphonyParser(object):
         parser.add_argument(
             '-t', '--tail',
             type=int,
-            default=100,
+            default=500,
             help='Only show the most recent lines of log. -1 to show all log lines.'
         )
 

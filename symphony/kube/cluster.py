@@ -252,7 +252,7 @@ class KubeCluster(Cluster):
             return pg[process_name]
 
     def get_log(self, experiment_name, process_name, process_group=None,
-                follow=False, since=0, tail=100, print_logs=False):
+                follow=False, since=0, tail=500, print_logs=False):
         if process_group is None:
             pod_name, container_name = process_name, process_name
         else:
