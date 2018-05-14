@@ -55,7 +55,7 @@ def ray_init_master_node(**ray_kwargs):
 
     ray.init(redis_address='localhost:{}'.format(port), **ray_kwargs)
     log.infobanner('Driver initialized', banner_lines=3)
-    log.info(nl.pprintstr(ray_client_table()))
+    log.infopp(ray_client_table(), width=200, compact=True)
 
 
 def ray_client_table():

@@ -4,10 +4,10 @@ import time
 import shlex
 import json
 
-from ray_utils import init_master_node
+from symphony.ray import *
 
 
-init_master_node()
+ray_init_master_node()
 
 
 def get_ip():
