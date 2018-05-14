@@ -10,8 +10,8 @@ PORTS = list(range(9000, 9500))
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('name', type=str, nargs='?', default='ray')
-parser.add_argument('-s', '--satellites', default=4, type=int)
+parser.add_argument('name', type=str)
+parser.add_argument('satellites', nargs='?', default=4, type=int)
 args = parser.parse_args()
 
 
@@ -22,7 +22,7 @@ cluster = Cluster.new('raykube')
 exp = cluster.new_experiment(args.name, port_range=PORTS)
 master = exp.new_master_process(
     num_satellites=args.satellites,
-    args=['python', '-u', MASTER_SCRIPT],
+    args=['python', '-u', MASTER_SCRIPT, '--batch-size', args.satellites*8],
     container_image=cpu_image,
 )
 
@@ -44,7 +44,7 @@ for i in range(args.satellites):
         container_image=cpu_image,
         # args=['--bash', 'ray/ray_worker.sh', i]
         args=['python', '-u', SATELLITE_SCRIPT],
-        resources={'mujoco': 15},
+        resources={'mujoco': 8},
         env=limit_numpy_env,
     )
 

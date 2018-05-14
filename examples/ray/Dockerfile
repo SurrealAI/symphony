@@ -8,7 +8,7 @@ ENV LC_ALL C.UTF-8
 ENV LANG C.UTF-8
 
 # force cache bust after this line
-RUN echo cache bust 12
+RUN echo cache bust 124
 RUN pip install git+git://github.com/SurrealAI/nanolog.git
 COPY examples/ray/entry.py /mylibs
 RUN chmod +x /mylibs/entry.py

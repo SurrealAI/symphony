@@ -76,7 +76,7 @@ def policy_backward(eph, epx, epdlogp, model):
     return {"W1": dW1, "W2": dW2}
 
 
-@ray.remote(resources={'mujoco': 3})
+@ray.remote(resources={'mujoco': 1})
 # @ray.remote(num_cpus=1)
 class PongEnv(object):
     def __init__(self):
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     ray_init_master_node(redirect_output=True, redirect_worker_output=True)
 
     parser = argparse.ArgumentParser(description="Train an RL agent on Pong.")
-    parser.add_argument("--batch-size", default=18, type=int,
+    parser.add_argument("--batch-size", default=16, type=int,
                         help="The number of rollouts to do per batch.")
     parser.add_argument("--iterations", default=-1, type=int,
                         help="The number of model updates to perform. By "

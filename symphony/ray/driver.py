@@ -47,15 +47,17 @@ def ray_init_master_node(**ray_kwargs):
     sync_server = ZmqServer(
         host='*', port=ray_zmq_port(), deserializer='json'
     )
+    log.info('Expecting', num_satellites, 'satellites.')
     # will not proceed until all satellites have connected
     for i in range(num_satellites):
         log.info(sync_server.recv())  # blocking
-        log.infofmt('Heard back from {} satellites so far', i+1)
+        log.infofmt('Heard back from {} satellite{} so far',
+                    i+1, 's' if i > 0 else '')
         sync_server.send('master alive: ' + ray_ip_address())
 
     ray.init(redis_address='localhost:{}'.format(port), **ray_kwargs)
     log.infobanner('Driver initialized', banner_lines=3)
-    log.infopp(ray_client_table(), width=300, compact=True)
+    log.infopp(ray_client_table(), width=400, compact=True)
 
 
 def ray_client_table():
