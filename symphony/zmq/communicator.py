@@ -8,7 +8,7 @@ from symphony.utils.threads import start_thread
 zmq_log = nl.Logger.create_logger(
     'zmq',
     stream='stdout',
-    time_format='hms',
+    time_format='HMS',
     show_level=True,
 )
 
@@ -27,6 +27,18 @@ def str2bytes(string):
         return string
     else:
         return string.encode('UTF-8')
+
+
+def _get_address(address, host, port):
+    if address is not None:
+        return address
+    else:
+        # https://stackoverflow.com/questions/6024003/why-doesnt-zeromq-work-on-localhost
+        assert host is not None and port is not None, \
+            "either specify address or (host and port), but not both"
+        if host == 'localhost':
+            host = '127.0.0.1'
+        return "tcp://{}:{}".format(host, port)
 
 
 class ZmqSocket(object):
@@ -54,22 +66,16 @@ class ZmqSocket(object):
                  verbose=True):
         """
         Args:
-            host: specifies address, localhost is translated to 127.0.0.1
-            address
-            port: specifies address
+            address: either specify address or (host and port), but not both
+            host: "localhost" is translated to 127.0.0.1
+                use "*" to listen to all incoming connections
+            port: int
             mode: zmq.PUSH, zmq.PULL, etc., or their string names
             bind: True -> bind to address, False -> connect to address (see zmq)
             context: Zmq.Context object, if None, client creates its own context
             verbose: set to True to print log messages
         """
-        if address is not None:
-            self.address = address
-        else:
-            # https://stackoverflow.com/questions/6024003/why-doesnt-zeromq-work-on-localhost
-            assert host is not None and port is not None
-            if host == 'localhost':
-                host = '127.0.0.1'
-            self.address = "tcp://{}:{}".format(host, port)
+        self.address = _get_address(address, host, port)
 
         if context is None:
             self._context = zmq.Context()
@@ -140,6 +146,7 @@ class ZmqPusher:
     def push(self, data):
         if self.serializer:
             data = self.serializer(data)
+        data = str2bytes(data)
         self.socket.send(data)
 
 
@@ -199,6 +206,7 @@ class ZmqClient:
         if self.serializer:
             msg = self.serializer(msg)
 
+        msg = str2bytes(msg)
         self.socket.send(msg)
 
         if self.timeout >= 0:
@@ -263,6 +271,7 @@ class ZmqServer:
             raise ValueError('send() and recv() must be paired. You can only recv() now')
         if self.serializer:
             msg = self.serializer(msg)
+        msg = str2bytes(msg)
         self.socket.send(msg)
         self._next_step = 'recv'
 
