@@ -3,6 +3,14 @@ This driver should be run as a standalone executable on a worker node.
 Worker nodes are only responsible for starting satellite ray servers that talk
 to the master server. They do not run any algorithm code directly.
 
+Ray cluster must follow the starting order:
+
+1. Ray master starts, but don't execute any training code.
+2. All ray workers need to start, and tell master they are up.
+    No worker can start _before_ master starts.
+3. After Ray master hears back from all worker nodes, it will unblock and
+    continue to execute training code
+
 Assumes the following environment variables:
 - SYMPH_RAY_MASTER_REDIS_ADDR: master ray address, set up by symphony AddressBook
 - SYMPH_RAY_RESOURCE: resource dict as a JSON string
