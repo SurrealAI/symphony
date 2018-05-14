@@ -9,14 +9,9 @@ ENV variables
 import os
 import sys
 import shlex
-import argparse
 import shutil
 import glob
 import errno
-
-parser = argparse.ArgumentParser()
-parser.add_argument('cmd', type=str, nargs='+', help='run arbitrary command')
-args = parser.parse_args()
 
 
 def f_copy(fsrc, fdst):
@@ -61,4 +56,4 @@ def _run_cmd_list(args):
         os.system(' '.join(map(shlex.quote, args)))
 
 
-_run_cmd_list(args.cmd)
+_run_cmd_list(sys.argv[1:])

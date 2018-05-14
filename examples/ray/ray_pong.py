@@ -148,10 +148,6 @@ class PongEnv(object):
 if __name__ == "__main__":
     ray_init_master_node(redirect_output=True, redirect_worker_output=True)
 
-    print('='*40, 'AFTER INIT_MASTER', '='*40)
-    from pprint import pprint
-    pprint(ray_client_table())
-
     parser = argparse.ArgumentParser(description="Train an RL agent on Pong.")
     parser.add_argument("--batch-size", default=18, type=int,
                         help="The number of rollouts to do per batch.")

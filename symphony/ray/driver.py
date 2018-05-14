@@ -42,19 +42,20 @@ def ray_init_master_node(**ray_kwargs):
               # '--plasma-directory /mnt/hugepages --huge-pages'
               .format(gpu_option, port, resources))
 
-    zmq_log = nl.Logger('zmq')
+    log = nl.Logger('zmq')  # existing log from zmq.structs
     # sync master and satellite nodes
     sync_server = ZmqServer(
         host='*', port=ray_zmq_port(), deserializer='json'
     )
     # will not proceed until all satellites have connected
     for i in range(num_satellites):
-        stats = nl.pprintstr(sync_server.recv())  # blocking call
-        zmq_log.infofmt('Heard back from {} satellites so far', i+1)
-        zmq_log.info(stats)
+        log.info(sync_server.recv())  # blocking
+        log.infofmt('Heard back from {} satellites so far', i+1)
         sync_server.send('master alive: ' + ray_ip_address())
 
     ray.init(redis_address='localhost:{}'.format(port), **ray_kwargs)
+    log.infobanner('Driver initialized', banner_lines=3)
+    log.info(nl.pprintstr(ray_client_table()))
 
 
 def ray_client_table():

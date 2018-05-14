@@ -10,7 +10,7 @@ from symphony.utils.serialization import (
 zmq_log = nl.Logger.create_logger(
     'zmq',
     stream='stdout',
-    time_format='HMS',
+    time_format='MD HMS',
     show_level=True,
 )
 

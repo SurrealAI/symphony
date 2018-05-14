@@ -35,16 +35,7 @@ def launch_satellite(log_file='satellite.out'):
     RAY_DIR = '/tmp/raylogs'
     os.makedirs(RAY_DIR, exist_ok=True)
 
-    log = nl.Logger.create_logger(
-        'satellite',
-        level=nl.DEBUG,
-        stream='stdout',
-        file_name=RAY_DIR + '/' + log_file,
-        file_mode='w',
-        time_format='MD HMS',
-        show_level=True
-    )
-
+    log = nl.Logger('zmq')  # existing log from zmq.structs
     log.info('Symphony-Ray satellite ID:', ray_id())
 
     resources = ray_resources()
