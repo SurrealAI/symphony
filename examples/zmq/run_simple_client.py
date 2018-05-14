@@ -4,10 +4,12 @@ import json
 
 
 client = ZmqClient(
-    'localhost', 7555,
-    serializer=json.dumps,
-    deserializer=json.loads
+    host='localhost', port=7555,
+    serializer='json',
+    deserializer='json'
 )
+s = client.socket
+print(s.address, s.host, s.port)
 
 msg = {'counter': 10, 'scream': 'hello'}
 

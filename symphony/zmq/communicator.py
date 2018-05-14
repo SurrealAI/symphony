@@ -3,7 +3,9 @@ import zmq
 from threading import Thread, Lock
 import nanolog as nl
 from symphony.utils.threads import start_thread
-
+from symphony.utils.serialization import (
+    get_serializer, get_deserializer, str2bytes
+)
 
 zmq_log = nl.Logger.create_logger(
     'zmq',
@@ -22,25 +24,6 @@ class ZmqTimeoutError(Exception):
         super().__init__('Request Timed Out')
 
 
-def str2bytes(string):
-    if isinstance(string, bytes):
-        return string
-    else:
-        return string.encode('UTF-8')
-
-
-def _get_address(address, host, port):
-    if address is not None:
-        return address
-    else:
-        # https://stackoverflow.com/questions/6024003/why-doesnt-zeromq-work-on-localhost
-        assert host is not None and port is not None, \
-            "either specify address or (host and port), but not both"
-        if host == 'localhost':
-            host = '127.0.0.1'
-        return "tcp://{}:{}".format(host, port)
-
-
 class ZmqSocket(object):
     """
         Wrapper around zmq socket, manages resources automatically
@@ -57,25 +40,46 @@ class ZmqSocket(object):
         'PAIR': zmq.PAIR,
     }
 
-    def __init__(self, mode,
-                 bind,
+    def __init__(self, *,
                  address=None,
                  host=None,
                  port=None,
+                 socket_mode,
+                 bind,
                  context=None,
                  verbose=True):
         """
+        Attributes:
+            address
+            host
+            port
+            bind
+            socket_mode
+            socket_type
+
         Args:
             address: either specify address or (host and port), but not both
             host: "localhost" is translated to 127.0.0.1
                 use "*" to listen to all incoming connections
             port: int
-            mode: zmq.PUSH, zmq.PULL, etc., or their string names
+            socket_mode: zmq.PUSH, zmq.PULL, etc., or their string names
             bind: True -> bind to address, False -> connect to address (see zmq)
             context: Zmq.Context object, if None, client creates its own context
             verbose: set to True to print log messages
         """
-        self.address = _get_address(address, host, port)
+        if address is None:
+            # https://stackoverflow.com/questions/6024003/why-doesnt-zeromq-work-on-localhost
+            assert host is not None and port is not None, \
+                "either specify address or (host and port), but not both"
+            if host == 'localhost':
+                host = '127.0.0.1'
+            address = "{}:{}".format(host, port)
+        if '://' in address:
+            self.address = address
+        else:  # defaults to TCP
+            self.address = 'tcp://' + address
+        self.host, port = self.address.split('//')[1].split(':')
+        self.port = int(port)
 
         if context is None:
             self._context = zmq.Context()
@@ -84,12 +88,12 @@ class ZmqSocket(object):
             self._context = context
             self._owns_context = False
 
-        if isinstance(mode, str):
-            mode = self.SOCKET_TYPES[mode.upper()]
-        self.mode = mode
+        if isinstance(socket_mode, str):
+            socket_mode = self.SOCKET_TYPES[socket_mode.upper()]
+        self.socket_mode = socket_mode
         self.bind = bind
         self.established = False
-        self._socket = self._context.socket(self.mode)
+        self._socket = self._context.socket(self.socket_mode)
         self._verbose = verbose
 
     def unwrap(self):
@@ -133,54 +137,64 @@ class ZmqSocket(object):
     @property
     def socket_type(self):
         reverse_map = {value: name for name, value in self.SOCKET_TYPES.items()}
-        return reverse_map[self.mode]
+        return reverse_map[self.socket_mode]
 
 
 class ZmqPusher:
-    def __init__(self, host, port, serializer=None, hwm=42):
-        self.socket = ZmqSocket(host=host, port=port, mode=zmq.PUSH, bind=False)
+    def __init__(self, address=None, host=None, port=None,
+                 serializer=None, hwm=42):
+        self.socket = ZmqSocket(
+            address=address, host=host, port=port,
+            socket_mode=zmq.PUSH, bind=False
+        )
         self.socket.set_hwm(hwm)
-        self.serializer = serializer
+        self.serializer = get_serializer(serializer)
         self.socket.establish()
 
     def push(self, data):
-        if self.serializer:
-            data = self.serializer(data)
-        data = str2bytes(data)
+        data = str2bytes(self.serializer(data))
         self.socket.send(data)
 
 
 class ZmqPuller:
-    def __init__(self, host, port, bind, serializer=None):
-        self.socket = ZmqSocket(host=host, port=port, mode=zmq.PULL, bind=bind)
-        self.serializer = serializer
+    def __init__(self, address=None, host=None, port=None,
+                 bind=True, deserializer=None):
+        self.socket = ZmqSocket(
+            address=address, host=host, port=port,
+            socket_mode=zmq.PULL, bind=bind
+        )
+        self.deserializer = get_deserializer(deserializer)
         self.socket.establish()
 
     def pull(self):
         data = self.socket.recv()
-        if self.serializer:
-            data = self.serializer(data)
-        return data
+        return self.deserializer(data)
 
 
 class ZmqClient:
     """
     Send request and receive reply from ZmqServer
     """
-    def __init__(self, host, port, timeout=-1,
-                 serializer=None, deserializer=None):
+    def __init__(self, address=None, host=None, port=None,
+                 timeout=-1,
+                 serializer=None,
+                 deserializer=None):
         """
         Args:
+            address:
+            host:
+            port:
             timeout: how long do we wait for response, in seconds,
                negative means wait indefinitely
+            serializer:
+            deserializer:
         """
         self.timeout = timeout
-        self.host = host
-        self.port = int(port)
-        self.serializer = serializer
-        self.deserializer = deserializer
+        self.serializer = get_serializer(serializer)
+        self.deserializer = get_deserializer(deserializer)
         self.socket = ZmqSocket(
-            host=self.host, port=self.port, mode=zmq.REQ, bind=False
+            address=address, host=host, port=port,
+            socket_mode=zmq.REQ, bind=False
         )
         if self.timeout >= 0:
             self.socket.setsockopt(zmq.LINGER, 0)
@@ -203,10 +217,7 @@ class ZmqClient:
             ZmqTimeoutError if timed out
         """
 
-        if self.serializer:
-            msg = self.serializer(msg)
-
-        msg = str2bytes(msg)
+        msg = str2bytes(self.serializer(msg))
         self.socket.send(msg)
 
         if self.timeout >= 0:
@@ -214,20 +225,16 @@ class ZmqClient:
             poller.register(self.socket.unwrap(), zmq.POLLIN)
             if poller.poll(self.timeout * 1000):
                 rep = self.socket.recv()
-                if self.deserializer:
-                    rep = self.deserializer(rep)
-                return rep
+                return self.deserializer(rep)
             else:
                 raise ZmqTimeoutError()
         else:
             rep = self.socket.recv()
-            if self.deserializer:
-                rep = self.deserializer(rep)
-            return rep
+            return self.deserializer(rep)
 
 
 class ZmqServer:
-    def __init__(self, host, port,
+    def __init__(self, address=None, host=None, port=None,
                  serializer=None,
                  deserializer=None,
                  load_balanced=False,
@@ -242,14 +249,13 @@ class ZmqServer:
             context:
 
         """
-        self.host = host
-        self.port = int(port)
-        self.serializer = serializer
-        self.deserializer = deserializer
+        self.serializer = get_serializer(serializer)
+        self.deserializer = get_deserializer(deserializer)
         self.socket = ZmqSocket(
-            mode=zmq.REP,
-            host=self.host,
-            port=self.port,
+            address=address,
+            host=host,
+            port=port,
+            socket_mode=zmq.REP,
             bind=not load_balanced,
             context=context
         )
@@ -261,17 +267,13 @@ class ZmqServer:
         if self._next_step != 'recv':
             raise ValueError('recv() and send() must be paired. You can only send() now')
         data = self.socket.recv()
-        if self.deserializer:
-            data = self.deserializer(data)
         self._next_step = 'send'
-        return data
+        return self.deserializer(data)
 
     def send(self, msg):
         if self._next_step != 'send':
             raise ValueError('send() and recv() must be paired. You can only recv() now')
-        if self.serializer:
-            msg = self.serializer(msg)
-        msg = str2bytes(msg)
+        msg = str2bytes(self.serializer(msg))
         self.socket.send(msg)
         self._next_step = 'recv'
 
@@ -317,9 +319,9 @@ class ZmqReqWorker(Thread):
         self.context = context
         
         self.sw_out = ZmqSocket(host=host, port=port,
-                                mode=zmq.REQ, bind=False, context=context)
+                                socket_mode=zmq.REQ, bind=False, context=context)
 
-        self.sw_inproc = ZmqSocket(address='inproc://worker', mode=zmq.REQ,
+        self.sw_inproc = ZmqSocket(address='inproc://worker', socket_mode=zmq.REQ,
                                    bind=False, context=context)
         self.handler = handler
 
@@ -392,7 +394,7 @@ class ZmqReqClientPoolFixedRequest(ZmqReqClientPool):
 
 class ZmqPub(ZmqSocket):
     def __init__(self, host, port, hwm=1, serializer=None):
-        super().__init__(host=host, port=port, mode=zmq.PUB, bind=True)
+        super().__init__(host=host, port=port, socket_mode=zmq.PUB, bind=True)
         self._socket.set_hwm(hwm)
         self.serializer = serializer
         self.establish()
@@ -406,7 +408,7 @@ class ZmqPub(ZmqSocket):
 
 class ZmqSub(ZmqSocket):
     def __init__(self, host, port, topic, hwm=1, serializer=None, context=None):
-        super().__init__(host=host, port=port, mode=zmq.SUB, bind=False, context=context)
+        super().__init__(host=host, port=port, socket_mode=zmq.SUB, bind=False, context=context)
         topic = str2bytes(topic)
         self.topic = topic
         self._socket.set_hwm(hwm)
@@ -491,14 +493,14 @@ class ZmqAsyncServer(Thread):
 
     def run(self):
         context = zmq.Context()
-        router_sw = ZmqSocket(mode=zmq.ROUTER,
+        router_sw = ZmqSocket(socket_mode=zmq.ROUTER,
                               bind=(not self.load_balanced),
                               host=self.host,
                               port=self.port,
                               context=context)
         router = router_sw.establish()
 
-        dealer_sw = ZmqSocket(mode=zmq.ROUTER,
+        dealer_sw = ZmqSocket(socket_mode=zmq.ROUTER,
                               bind=True,
                               address="inproc://worker",
                               context=context)
@@ -538,7 +540,7 @@ class ZmqSimpleServer(Thread):
         self.context = context
 
     def run(self):
-        self.sw = ZmqSocket(mode=zmq.REP,
+        self.sw = ZmqSocket(socket_mode=zmq.REP,
                             host=self.host,
                             port=self.port,
                             bind=self.bind,

@@ -10,8 +10,10 @@ def handler(msg):
 
 
 server = ZmqServer(
-    'localhost', 7555,
+    '*:7555',
     serializer=json.dumps,
     deserializer=json.loads
 )
+s = server.socket
+print(s.address, s.host, s.port)
 server.start_event_loop(handler, blocking=True)
