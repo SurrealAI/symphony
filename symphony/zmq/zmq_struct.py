@@ -1,11 +1,10 @@
 import queue
 import zmq
 from threading import Thread, Lock
-import surreal.utils as U
-from tensorplex import Logger
+import nanolog as nl
 
 
-zmq_logger = Logger.get_logger(
+zmq_log = nl.Logger.create_logger(
     'zmq',
     stream='stdout',
     time_format='hms',
@@ -19,23 +18,42 @@ class ZmqError(Exception):
 
 class ZmqTimeoutError(Exception):
     def __init__(self):
-        super().__init__('Request Timed Out')    
+        super().__init__('Request Timed Out')
+
+
+def str2bytes(string):
+    if isinstance(string, bytes):
+        return string
+    else:
+        return string.encode('UTF-8')
 
 
 class ZmqSocketWrapper(object):
     """
         Wrapper around zmq socket, manages resources automatically
     """
+    SOCKET_TYPES = {
+        'PULL': zmq.PULL,
+        'PUSH': zmq.PUSH,
+        'PUB': zmq.PUB,
+        'SUB': zmq.SUB,
+        'REQ': zmq.REQ,
+        'REP': zmq.REP,
+        'ROUTER': zmq.ROUTER,
+        'DEALER': zmq.DEALER,
+        'PAIR': zmq.PAIR,
+    }
+
     def __init__(self, mode, bind, address=None, host=None, port=None, context=None, silent=False):
         """
         Args:
-            @host: specifies address, localhost is translated to 127.0.0.1
-            @address
-            @port: specifies address
-            @mode: zmq.PUSH, zmq.PULL, etc.
-            @bind: True -> bind to address, False -> connect to address (see zmq)
-            @context: Zmq.Context object, if None, client creates its own context
-            @silent: set to True to prevent printing
+            host: specifies address, localhost is translated to 127.0.0.1
+            address
+            port: specifies address
+            mode: zmq.PUSH, zmq.PULL, etc., or their string names
+            bind: True -> bind to address, False -> connect to address (see zmq)
+            context: Zmq.Context object, if None, client creates its own context
+            silent: set to True to prevent printing
         """
         if address is not None:
             self.address = address
@@ -54,6 +72,8 @@ class ZmqSocketWrapper(object):
             self.context = context
             self.owns_context = False
 
+        if isinstance(mode, str):
+            mode = self.SOCKET_TYPES[mode.upper()]
         self.mode = mode
         self.bind = bind
         self.socket = self.context.socket(self.mode)
@@ -69,11 +89,11 @@ class ZmqSocketWrapper(object):
         self.established = True
         if self.bind:
             if not self.silent:
-                zmq_logger.infofmt('[{}] binding to {}', self.socket_type, self.address)
+                zmq_log.infofmt('[{}] binding to {}', self.socket_type, self.address)
             self.socket.bind(self.address)
         else:
             if not self.silent:
-                zmq_logger.infofmt('[{}] connecting to {}', self.socket_type, self.address)
+                zmq_log.infofmt('[{}] connecting to {}', self.socket_type, self.address)
             self.socket.connect(self.address)
         return self.socket
 
@@ -85,24 +105,8 @@ class ZmqSocketWrapper(object):
 
     @property
     def socket_type(self):
-        if self.mode == zmq.PULL:
-            return 'PULL'
-        elif self.mode == zmq.PUSH:
-            return 'PUSH'
-        elif self.mode == zmq.PUB:
-            return 'PUB'
-        elif self.mode == zmq.SUB:
-            return 'SUB'
-        elif self.mode == zmq.PAIR:
-            return 'PAIR'
-        elif self.mode == zmq.REQ:
-            return 'REQ'
-        elif self.mode == zmq.REP:
-            return 'REP'
-        elif self.mode == zmq.ROUTER:
-            return 'ROUTER'
-        elif self.mode == zmq.DEALER:
-            return 'DEALER'
+        reverse_map = {value: name for name, value in self.SOCKET_TYPES.items()}
+        return reverse_map[self.mode]
 
 
 class ZmqPusher(ZmqSocketWrapper):
@@ -245,7 +249,7 @@ class ZmqReqClientPoolFixedRequest(ZmqReqClientPool):
         return self.request
 
 
-class ZmqReq():
+class ZmqReq:
     def __init__(self, host, port, preprocess=None, postprocess=None, timeout=-1):
         """
         Args:
@@ -301,7 +305,7 @@ class ZmqPub(ZmqSocketWrapper):
         self.establish()
 
     def pub(self, topic, data):
-        topic = U.str2bytes(topic)
+        topic = str2bytes(topic)
         if self.preprocess:
             data = self.preprocess(data)
         self.socket.send_multipart([topic, data])
@@ -310,7 +314,7 @@ class ZmqPub(ZmqSocketWrapper):
 class ZmqSub(ZmqSocketWrapper):
     def __init__(self, host, port, topic, hwm=1, preprocess=None, context=None):
         super().__init__(host=host, port=port, mode=zmq.SUB, bind=False, context=context)
-        topic = U.str2bytes(topic)
+        topic = str2bytes(topic)
         self.topic = topic
         self.socket.set_hwm(hwm)
         self.socket.setsockopt(zmq.SUBSCRIBE, topic)

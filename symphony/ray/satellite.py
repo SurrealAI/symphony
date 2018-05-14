@@ -28,6 +28,7 @@ def launch_satellite(log_file='satellite.out'):
     log = nl.Logger.create_logger(
         'satellite',
         level=nl.DEBUG,
+        stream='stdout',
         file_name=RAY_DIR + '/' + log_file,
         file_mode='w',
         time_format='MD HMS',
