@@ -5,12 +5,13 @@ import os
 import json
 
 
-RAY_MASTER_SERVICE = 'ray-master-redis'  # for kube cluster
+RAY_MASTER_SERVICE = 'ray-master-redis'  # for satellites to connect
+RAY_ZMQ_SYNC = 'ray-zmq-sync'  # sync cluser start-up to a particular order
 
 
 def ray_master_redis_port():
     """
-    Used in master driver script.
+    Use in master driver script.
     Make sure the master process in symphony binds to 'ray_master_redis'
     and satellite processes connects to 'ray_master_redis'
     """
@@ -19,11 +20,27 @@ def ray_master_redis_port():
 
 def ray_master_redis_addr():
     """
-    Used on satellite nodes.
+    Use on satellite nodes.
     Make sure the master process in symphony binds to 'ray_master_redis'
     and satellite processes connects to 'ray_master_redis'
     """
     return os.environ['SYMPH_RAY_MASTER_REDIS_ADDR']
+
+
+def ray_zmq_port():
+    """
+    Use in master driver script.
+    ZmqServer on master node should bind to tcp://*:<port>
+    """
+    return int(os.environ['SYMPH_RAY_ZMQ_SYNC_PORT'])
+
+
+def ray_zmq_addr():
+    """
+    Use on satellite nodes.
+    Satellite ZmqClient should all connect to this addr
+    """
+    return os.environ['SYMPH_RAY_ZMQ_SYNC_ADDR']
 
 
 def ray_resources():
@@ -31,10 +48,15 @@ def ray_resources():
 
 
 def ray_id():
-    return json.loads(os.environ['SYMPH_RAY_ID'])
+    return os.environ['SYMPH_RAY_ID']
 
 
-def ray_env_dict(id, resources=None, other_envs=None):
+def ray_num_satellites():
+    "useful in master only"
+    return int(os.environ['SYMPH_RAY_NUM_SATELLITES'])
+
+
+def generate_env_dict(id, resources=None, other_envs=None):
     """
     Generate env dict for ray nodes.
     Should be used in symphony launch script. Pass to KubeProcess constructor.

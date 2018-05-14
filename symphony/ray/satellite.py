@@ -23,7 +23,9 @@ import time
 import subprocess
 import json
 import nanolog as nl
+from .driver import ray_ip_address
 from .symph_envs import *
+from symphony.zmq.communicator import ZmqClient
 
 
 # TODO disable Transparent Huge Page (THP) in docker
@@ -47,6 +49,16 @@ def launch_satellite(log_file='satellite.out'):
 
     resources = ray_resources()
     log.info('tagged resources:', resources)
+
+    zmq_sync = ZmqClient(
+        address=ray_zmq_addr(), serializer='json', deserializer='str'
+    )
+
+    # block until master is alive
+    reply = zmq_sync.request({
+        'id': ray_id(), 'ip': ray_ip_address(), 'resources': resources
+    })
+    log.info(reply, '... unblock')
 
     if 'gpu' in resources:
         num_gpus = int(resources.pop('gpu'))
