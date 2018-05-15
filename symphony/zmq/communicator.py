@@ -264,6 +264,10 @@ class ZmqServer:
         self._next_step = 'recv'  # for error checking only
 
     def recv(self):
+        """
+        Warnings:
+            DO NOT call recv() after you start an event_loop
+        """
         if self._next_step != 'recv':
             raise ValueError('recv() and send() must be paired. You can only send() now')
         data = self.socket.recv()
@@ -271,6 +275,10 @@ class ZmqServer:
         return self.deserializer(data)
 
     def send(self, msg):
+        """
+        Warnings:
+            DO NOT call send() after you start an event_loop
+        """
         if self._next_step != 'send':
             raise ValueError('send() and recv() must be paired. You can only recv() now')
         msg = str2bytes(self.serializer(msg))
@@ -524,33 +532,3 @@ class ZmqAsyncServer(Thread):
         dealer.close()
         context.term()
 
-
-class ZmqSimpleServer(Thread):
-    def __init__(self, host, port, handler,
-                 load_balanced, context=None,
-                 serializer=None, 
-                 deserializer=None):
-        Thread.__init__(self)
-        self.host = host
-        self.port = port
-        self.bind = (not load_balanced)
-        self.serializer = serializer
-        self.deserializer = deserializer
-        self.handler = handler
-        self.context = context
-
-    def run(self):
-        self.sw = ZmqSocket(socket_mode=zmq.REP,
-                            host=self.host,
-                            port=self.port,
-                            bind=self.bind,
-                            context=self.context)
-        socket = self.sw.establish()
-        while True:
-            req = socket.recv()
-            if self.serializer:
-                req = self.serializer(req)
-            res = self.handler(req)
-            if self.deserializer:
-                res = self.deserializer(res)
-            socket.send(res)
