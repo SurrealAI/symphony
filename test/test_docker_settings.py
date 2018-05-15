@@ -1,8 +1,7 @@
-from symphony.addons import DockerRecordMaster
+from symphony.addons import DockerBuilder
 
-data = [
-    {
-        'name': 'test',
+data = {
+    'test': {
         'temp_directory': '/tmp/symphonyabc',
         'context_directories': [
             {
@@ -19,16 +18,15 @@ data = [
         'verbose': False,
         'dockerfile': 'test_docker_Dockerfile1',
     },
-    {
-        'name': 'test2',
+    'test2': {
         'dockerfile': 'test_docker_Dockerfile2',
     },
-    {
+    'test3': {
         'name': 'test_incorrect',
         'verbose': True,
         # 'dockerfile': 'test_docker_Dockerfile',
     }
-]
+}
 
 correct = {
             'tensorplex': {
@@ -44,37 +42,21 @@ correct = {
         }
 
 def test_load_full():
-    master = DockerRecordMaster()
-    master.add_config(data[0])
-    builder = master.get('test')
+    builder = DockerBuilder.from_dict(data['test'])
     assert str(builder.temp_directory) == '/tmp/symphonyabc/symphony_docker_build'
     assert builder.context_directories == correct
     assert not builder.verbose
     assert str(builder.dockerfile) == 'test_docker_Dockerfile1'
 
 def test_load_default():
-    master = DockerRecordMaster()
-    master.add_config(data[1])
-    builder = master.get('test2')
+    builder = DockerBuilder.from_dict(data['test2'])
     assert str(builder.temp_directory) == '/tmp/symphony/symphony_docker_build'
     assert builder.verbose
     assert builder.context_directories == {}
     assert str(builder.dockerfile) == 'test_docker_Dockerfile2'
 
-def test_load_all():
-    master = DockerRecordMaster()
-    master.load_all(data[:2])
-
 def test_load_incorret():
-    master = DockerRecordMaster()
     try:
-        master.load_all(data)
+        builder = DockerBuilder.from_dict(data['test3'])
     except ValueError:
-        pass
-
-def test_load_keyerror():
-    master = DockerRecordMaster()
-    try:
-        master.get('nonexistant')
-    except KeyError:
         pass
