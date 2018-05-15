@@ -1,6 +1,7 @@
 import os
 import time
 import libtmux
+import shlex
 from libtmux.exc import LibTmuxException
 from symphony.engine import Cluster
 from symphony.tmux.experiment import TmuxExperimentSpec
@@ -75,7 +76,7 @@ class TmuxCluster(Cluster):
         # Retry loop to make sure we run process commands after
         # shell starts (heuristically checked by ensuring pane has
         # some output in the buffer).
-        env_cmds = ['export {}={}'.format(k,v) for k,v in process.env.items()]
+        env_cmds = ['export {}={}'.format(k,shlex.quote(v)) for k,v in process.env.items()]
         cmds = env_cmds + preamble_cmds + process.cmds
         if cmds:
             start_time = time.time()
