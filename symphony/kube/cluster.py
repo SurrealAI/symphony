@@ -182,11 +182,14 @@ class KubeCluster(Cluster):
             return 'waiting: {}'.format(state_info.reason)
         elif state == 'running':
             return 'running: {}'.format(self._get_age(state_info.startedAt))
-        elif state == 'completed':
-            return 'completed ({}) after {}: {}' \
-                .format(state_info.exitCode,
+        elif state == 'completed' or state == 'terminated':
+            return '{} ({}) after {}: {}' \
+                .format(state,
+                        state_info.exitCode,
                         self._get_age(state_info.startedAt, state_info.finishedAt),
                         state_info.reason)
+        else:
+            print('UNKONWN state:', state, state_info)
 
     def _get_age(self, start_time_str, finish_time_str=None):
         """
