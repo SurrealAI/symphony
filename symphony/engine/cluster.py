@@ -223,6 +223,7 @@ class Cluster(metaclass=_BackendRegistry):
         matches = []
         matches += sorted([n for n in all_names if n.startswith(prefixed_name)])
         matches += sorted([n for n in all_names if n.startswith(name)])
+        matches += sorted([n for n in all_names if n.endswith(name)])
         matches += sorted([n for n in all_names if name in n])
         matches = deduplicate_with_order(matches)
         return matches, False
@@ -262,6 +263,9 @@ class Cluster(metaclass=_BackendRegistry):
         comparator = lambda pair: (str(pair[1]), str(pair[0]))
         matches += sorted([
             (pg, p) for pg, p in all_pairs if p.startswith(proc_name)
+        ], key=comparator)
+        matches += sorted([
+            (pg, p) for pg, p in all_pairs if p.endswith(proc_name)
         ], key=comparator)
         matches += sorted([
             (pg, p) for pg, p in all_pairs if proc_name in p
