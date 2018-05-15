@@ -33,7 +33,7 @@ class TmuxProcessSpec(ProcessSpec):
             di(env_var_name(str): env_var_val(str))
         """
         for k, v in di.items():
-            self.env[k] = v
+            self.env[k] = str(v)
 
     @classmethod
     def load_dict(cls):
