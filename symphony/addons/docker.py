@@ -10,38 +10,6 @@ import docker
 from symphony.utils.common import print_err
 
 
-class DockerRecordMaster:
-    """
-    Manages docker information, returns docker builder
-    """
-    def __init__(self, configs=None):
-        self.settings = {}
-        if configs is not None:
-            self.load_all(configs)
-
-    def load_all(self, li):
-        """
-        load all configs in list li
-        """
-        for di in li:
-            self.add_config(di)
-
-    def add_config(self, di):
-        """
-        Add a setting to the storage
-        """
-        name = di['name']
-        if name in self.settings:
-            print_err('[Warning] Overwriting docker build setting for {}'.format(name))
-        self.settings[name] = DockerBuilder.format_docker_build_settings(di)
-
-    def get(self, name):
-        """
-        Return a DockerBuilder instance under name @name
-        """
-        return DockerBuilder(**(self.settings[name]))
-
-
 class DockerBuilder:
     """
     Builder for a docker image
@@ -68,21 +36,18 @@ class DockerBuilder:
         self.client = docker.APIClient()
 
     @classmethod
-    def format_docker_build_settings(cls, di):
+    def from_dict(cls, di):
         """
-        Formats di so it can intialize a DockerBuilderInstance
+        Formats di and intializes a DockerBuilderInstance
         """
-        if 'name' not in di:
-            raise ValueError('[Error] Every build setting must have a name')
-        name = di['name']
+        if 'dockerfile' not in di:
+            raise ValueError('[Error] Must provide a dockerfile for build setting')
         if 'temp_directory' not in di:
-            print_err('[Warning] Setting build directory of {} to /tmp/symphony'.format(name))
+            print_err('[Warning] Setting build directory to default: /tmp/symphony')
             di['temp_directory'] = '/tmp/symphony'
         if 'context_directories' not in di:
-            print_err('[Warning] {} has no dependent files'.format(name))
+            print_err('[Warning] Build setting has no dependent files')
             di['context_directories'] = []
-        if 'dockerfile' not in di:
-            raise ValueError('[Error] Must provide a dockerfile for build setting {}'.format(name))
         config = {
             'temp_directory': str(di['temp_directory']),
             'context_directories': list(di['context_directories']),
@@ -90,7 +55,7 @@ class DockerBuilder:
         }
         if 'verbose' in di:
             config['verbose'] = di['verbose']
-        return config
+        return DockerBuilder(**config)
 
     def configure_context(self, context_directories):
         """
