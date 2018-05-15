@@ -7,8 +7,16 @@ import re
 from os.path import expanduser
 from pathlib import Path
 import docker
-from symphony.utils.common import print_err
+import nanolog as nl
 
+
+_log = nl.Logger.create_logger(
+    'dockerbuilder',
+    level=nl.INFO,
+    time_format='HMS',
+    show_level=True,
+    stream='stderr'
+)
 
 class DockerBuilder:
     """
@@ -31,8 +39,9 @@ class DockerBuilder:
         self.dockerfile = Path(expanduser(dockerfile))
         self.context_directories = {}
         self.configure_context(context_directories)
-        self.verbose = verbose
-
+        self.img = None
+        if not verbose:
+            _log.set_level(nl.WARN)
         self.client = docker.APIClient()
 
     @classmethod
@@ -41,12 +50,12 @@ class DockerBuilder:
         Formats di and intializes a DockerBuilderInstance
         """
         if 'dockerfile' not in di:
-            raise ValueError('[Error] Must provide a dockerfile for build setting')
+            raise ValueError('Must provide a dockerfile for build setting')
         if 'temp_directory' not in di:
-            print_err('[Warning] Setting build directory to default: /tmp/symphony')
+            _log.warn('Setting build directory to default: /tmp/symphony')
             di['temp_directory'] = '/tmp/symphony'
         if 'context_directories' not in di:
-            print_err('[Warning] Build setting has no dependent files')
+            _log.warn('Build setting has no dependent files')
             di['context_directories'] = []
         config = {
             'temp_directory': str(di['temp_directory']),
@@ -75,9 +84,10 @@ class DockerBuilder:
         for entry in context_directories:
             entryname = entry['name']
             if entryname in self.context_directories:
-                raise ValueError('[Error] Name {} is referred to by more than two paths: {}, {}' \
-                                    .format(entryname, entry['path'],
-                                            self.context_directories[entryname]))
+                raise ValueError(
+                    'Name {} is referred to by more than two paths: {}, {}'
+                    .format(entryname, entry['path'], self.context_directories[entryname])
+                )
             if 'force_update' not in entry:
                 entry['force_update'] = True
             self.context_directories[entryname] = {
@@ -91,7 +101,7 @@ class DockerBuilder:
         Excecute build
         Returns image id or None if build failed
         """
-        self.print("[Info] Using temporary build directory {}".format(str(self.temp_directory)))
+        _log.info("Using temporary build directory", self.temp_directory)
         self.temp_directory.mkdir(parents=True, exist_ok=True)
 
         # Copy dockerfile
@@ -100,12 +110,13 @@ class DockerBuilder:
         for k, v in self.context_directories.items():
             self.retrieve_directory(**v)
 
-        print('[Info] Building')
-        response = self.client.build(path=str(self.temp_directory),
-                                     decode=True, tag=tag)
+        _log.info('start building', self.dockerfile)
+        response = self.client.build(
+            path=str(self.temp_directory), decode=True, tag=tag
+        )
         last_event = None
         for line_parsed in response:
-            self.output_docker_res(line_parsed)
+            self._print_docker_output(line_parsed)
             last_event = line_parsed
 
         if last_event is not None and 'stream' in last_event:
@@ -115,23 +126,23 @@ class DockerBuilder:
                 image_id = match.group(1)
                 self.img = image_id
 
-    def output_docker_res(self, line_parsed):
+    def _print_docker_output(self, line_parsed):
         """
         Parse docker output
         """
         if 'stream' in line_parsed:
-            self.print(line_parsed['stream'], end='', flush=True)
+            print(line_parsed['stream'], end='', flush=True)
         elif 'error' in line_parsed:
-            self.print(line_parsed['error'])
+            print(line_parsed['error'])
         else:
-            self.print(line_parsed)
+            print(line_parsed)
 
     def push(self, repository, tag=None):
         """
         docker push
         """
         if self.img is None:
-            raise ValueError("[Error] Image not build, cannot push")
+            raise RuntimeError("[Error] Image not built, cannot push")
 
         # Docker api is bad
         # res = self.client.push(repository, tag=tag, stream=True, decode=True)
@@ -146,13 +157,13 @@ class DockerBuilder:
         docker tag
         """
         if self.img is None:
-            raise ValueError("[Error] Image not build, cannot tag")
+            raise RuntimeError("[Error] Image not built, cannot tag")
 
         success = self.client.tag(self.img, repository, tag, force)
         tag_name = self.tag_name(repository, tag)
 
         if success:
-            self.print('[Info] Successfully tagged {} with {}'.format(self.img, tag_name))
+            _log.infofmt('Successfully tagged {} with {}', self.img, tag_name)
         else:
             raise RuntimeError('[Error] Tag {} failed'.format(tag_name))
 
@@ -164,6 +175,14 @@ class DockerBuilder:
             return repository
         else:
             return '{}:{}'.format(repository, tag)
+
+    def build_and_push(self, repo, tag=None):
+        """
+        Equivalent to build(), tag(), and then push()
+        """
+        self.build()
+        self.tag(repo, tag=tag)
+        self.push(repo, tag=tag)
 
     def retrieve_directory(self, name, path, force_update):
         """
@@ -177,14 +196,14 @@ class DockerBuilder:
         target_path = self.temp_directory / name
         if target_path.exists():
             if force_update:
-                self.print("[Info] Removing cached files at {}".format(target_path))
+                _log.info("Removing cached files at", target_path)
                 shutil.rmtree(str(target_path))
             else:
-                self.print("[Info] Using cached files at {}".format(target_path))
+                _log.info("Using cached files at", target_path)
                 return
         source = path
         target = str(target_path)
-        self.print('cp -r {} {}'.format(source, target))
+        _log.infofmt('cp -r {} {}', source, target)
         shutil.copytree(source, target)
         return
 
@@ -193,17 +212,9 @@ class DockerBuilder:
         copy dockerfile to temp directory
         """
         dockerfile_path = (self.temp_directory / 'Dockerfile')
-        self.print('[Info] Copying dockerfile from {} to {}' \
-                   .format(str(self.dockerfile), str(dockerfile_path)))
+        _log.infofmt('Copying dockerfile from {} to {}',
+                     self.dockerfile, dockerfile_path)
         with dockerfile_path.open('w') as f:
             with self.dockerfile.open('r') as f_in:
                 for line in f_in:
                     f.write(line)
-
-
-    def print(self, *args, **kwargs):
-        """
-        print depending on verbose settings
-        """
-        if self.verbose:
-            print(*args, **kwargs)
