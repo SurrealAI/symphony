@@ -28,8 +28,10 @@ master = exp.new_master_process(
 
 if USE_SURREAL:
     # master is just a driver that doesn't run code
-    master.node_selector(key='surreal-node', value='agent')
-    master.resource_request(cpu=1.5)
+    # master.node_selector(key='surreal-node', value='agent')
+    # master.resource_request(cpu=1.5)
+    master.node_selector(key='surreal-node', value='nonagent-cpu')
+    master.resource_request(cpu=7.5)
 
 
 # DEMO ONLY otherwise won't be much faster than serial version
