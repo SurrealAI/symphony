@@ -1,4 +1,5 @@
 import shlex
+import time
 from datetime import datetime
 from pathlib import Path
 from collections import OrderedDict
@@ -277,6 +278,33 @@ class KubeCluster(Cluster):
                 return ''
             else:
                 return out
+
+    def get_log_when_alive(self,
+                           experiment_name, process_name, process_group=None,
+                           follow=False, since=0, tail=500, print_logs=False,
+                           sleep_interval=10):
+        """
+        Wait until the pod is alive and then the same as get_log()
+
+        Args:
+            sleep_interval: interval between queries
+        """
+        while True:
+            stats_dict = self.describe_experiment(experiment_name)
+            try:
+                stat = stats_dict[process_group][process_name]
+            except KeyError as e:
+                raise KeyError('process_group or process_name not found: {}'.format(e))
+
+            if stat['Ready'] == '1' and stat['State'].startswith('running'):
+                # pod is alive
+                return self.get_log(
+                    experiment_name=experiment_name,
+                    process_name=process_name,
+                    process_group=process_group,
+                    follow=follow, since=since, tail=tail, print_logs=print_logs
+                )
+            time.sleep(sleep_interval)
 
     def external_url(self, experiment_name, service_name):
         res = BeneDict(self.query_resources('svc', 'yaml',
