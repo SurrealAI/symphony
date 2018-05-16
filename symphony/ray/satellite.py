@@ -41,22 +41,23 @@ def launch_satellite(log_file='satellite.out'):
     resources = ray_resources()
     log.info('tagged resources:', resources)
 
-    zmq_sync = ZmqClient(
+    sync_client = ZmqClient(
         address=ray_zmq_addr(), serializer='json', deserializer='str'
     )
 
     # block until master is alive
-    reply = zmq_sync.request({
-        'id': ray_id(), 'ip': ray_ip_address(), 'resources': resources
+    reply = sync_client.request({
+        'status': 'alive', 'id': ray_id(),
+        'ip': ray_ip_address(), 'resources': resources
     })
-    log.info(reply, '... unblock')
+    log.info(reply, '... proceed to initialize Ray clients')
 
     if 'gpu' in resources:
         num_gpus = int(resources.pop('gpu'))
         gpu_option = '--num-gpus={}'.format(num_gpus)
     else:
         gpu_option = ''
-    resources = shlex.quote(json.dumps(resources))
+    resource_str = shlex.quote(json.dumps(resources))
 
     # try starting ray connection and loop until success
     success = False
@@ -72,7 +73,7 @@ def launch_satellite(log_file='satellite.out'):
             '{} '
             '--resources={} '
             '--plasma-directory /dev/shm'
-            .format(ray_master_redis_addr(), gpu_option, resources),
+            .format(ray_master_redis_addr(), gpu_option, resource_str),
             shell=True
         )
         exitcode = proc.returncode
@@ -88,6 +89,11 @@ def launch_satellite(log_file='satellite.out'):
         trials += 1
 
     if success:
+        _ = sync_client.request({
+            'status': 'connected', 'id': ray_id(),
+            'ip': ray_ip_address(), 'resources': resources
+        })
+        log.info('Ray client initialized and connected, ready to roll')
         while True:  # process waits indefinitely to keep pod alive
             log.infofmt('Satellite {} alive', ray_id())
             time.sleep(3600)
