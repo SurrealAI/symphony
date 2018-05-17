@@ -9,15 +9,26 @@ class KubeParser(SymphonyParser):
 
     def setup(self): # step 2
         super().setup()
-        parser = self.add_subparser('create') 
+        parser = self.add_subparser('create')
+        parser.add_argument('experiment_name', type=str)
         # add subcommand: `python run_kube.py create`
         # This subcommand is mapped to self.action_create(args)
 
     def action_create(self, args):
         cluster = self.cluster
-        exp = cluster.new_experiment('hello-world')
-        client = exp.new_process('client', container_image='us.gcr.io/surreal-dev-188523/symphony-demo:latest', command=['python'], args=['/run_simple_client.py'])
-        server = exp.new_process('server', container_image='us.gcr.io/surreal-dev-188523/symphony-demo:latest', command=['python'], args=['/run_simple_server.py'])
+        exp = cluster.new_experiment(args.experiment_name)
+        client = exp.new_process(
+            'client',
+            container_image='us.gcr.io/surreal-dev-188523/symphony-demo:latest',
+            command=['python'],
+            args=['-u', '/run_simple_client.py']
+        )
+        server = exp.new_process(
+            'server',
+            container_image='us.gcr.io/surreal-dev-188523/symphony-demo:latest',
+            command=['python'],
+            args=['-u', '/run_simple_server.py']
+        )
         # Good to have when you are doing development
         client.image_pull_policy('Always')
         server.image_pull_policy('Always')

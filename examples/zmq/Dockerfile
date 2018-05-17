@@ -1,4 +1,4 @@
-from python:3.6
+FROM python:3.6
 
 RUN echo cache bust 125
 COPY symphony /symphony
