@@ -54,7 +54,7 @@ class SymphonyParser(object):
         self._setup_log() #
         self._setup_visit() #
 
-    def add_subparser(self, name, aliases, **kwargs):
+    def add_subparser(self, name, aliases=None, **kwargs):
         """ Add a subparser with name @name
         Args:
             name: The name of the sub parser. Method 'action_' + name will be called
@@ -62,6 +62,8 @@ class SymphonyParser(object):
             aliases(list(str)): other names to invoke this command (e.g. ['l', 'logs'])
             kwargs: kwargs to provide to subparsers.add_parser()
         """
+        if aliases is None:
+            aliases = []
         method_name = 'action_' + name.replace('-', '_')
         if not hasattr(self, method_name):
             raise ValueError(

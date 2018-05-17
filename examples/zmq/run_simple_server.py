@@ -1,4 +1,5 @@
 from symphony.zmq import *
+import os
 import json
 
 
@@ -8,12 +9,15 @@ def handler(msg):
     msg['scream'] += 'a'
     return msg
 
-
+port = os.environ['SYMPH_EXAMPLE_PORT']
+listen_add = 'tcp://*:{}'.format(port)
 server = ZmqServer(
-    '*:7555',
+    listen_add,
     serializer=json.dumps,
     deserializer=json.loads
 )
+print('Server initialized')
 s = server.socket
 print(s.address, s.host, s.port)
+print('Starting event loop')
 server.start_event_loop(handler, blocking=True)

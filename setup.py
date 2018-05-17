@@ -27,6 +27,8 @@ setup(
     install_requires=[
         "BeneDict>=0.3",
         "libtmux",
+        "nanolog",
+        "docker",
     ],
     entry_points={
         'console_scripts': [

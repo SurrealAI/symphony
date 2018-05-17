@@ -1,10 +1,11 @@
 from symphony.zmq import *
+import os
 import time
 import json
 
 
 client = ZmqClient(
-    host='localhost', port=7555,
+    host=os.environ['SYMPH_EXAMPLE_HOST'], port=os.environ['SYMPH_EXAMPLE_PORT'],
     serializer='json',
     deserializer='json'
 )
