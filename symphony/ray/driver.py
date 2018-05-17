@@ -11,7 +11,7 @@ from .symph_envs import *
 from symphony.zmq import ZmqServer
 
 
-def ray_init_master_node(**ray_kwargs):
+def ray_init_master_node(*, debug=False, **ray_kwargs):
     """
     Should be called _before_ any training code.
     Custom resources and Redis address will be passed as env vars by symphony's
@@ -43,16 +43,42 @@ def ray_init_master_node(**ray_kwargs):
               .format(gpu_option, port, resources))
 
     log = nl.Logger('zmq')  # existing log from zmq.structs
+    if debug:
+        log.set_level(nl.TRACE)
     # sync master and satellite nodes
     sync_server = ZmqServer(
         host='*', port=ray_zmq_port(), deserializer='json'
     )
-    log.info('Expecting', num_satellites, 'satellites.')
-    # will not proceed until all satellites have connected
-    for i in range(num_satellites):
-        log.info(sync_server.recv())  # blocking
-        log.infofmt('Heard back from {} satellite{} so far',
-                    i+1, 's' if i > 0 else '')
+
+    # will block until all satellite pods spin up
+    # AND initialized and connected. We need 2 rounds of message syncing
+    sat_alive = set()
+    sat_connected = set()
+
+    for i in range(num_satellites * 2):
+        sat_msg = sync_server.recv()  # dict, blocking
+        log.info(sat_msg)
+        assert sat_msg['status'] in ['alive', 'connected'], 'INTERNAL'
+        sat_id = sat_msg['id']
+        if sat_msg['status'] == 'alive':
+            assert sat_id not in sat_alive, \
+                'INTERNAL: satellite has already reported "alive"'
+            sat_alive.add(sat_id)
+        else:
+            assert sat_id not in sat_connected, \
+                'INTERNAL: satellite has already reported "connected"'
+            assert sat_id in sat_alive, \
+                'INTERNAL: satellite reports connected but not alive'
+            sat_connected.add(sat_id)
+        log.debug('Alive:', sorted(list(sat_alive)),
+                  '; Connected:', sorted(list(sat_connected)))
+        log.infofmt(
+            '{num_alive}/{total} pods alive and '
+            '{num_connected}/{total} ray clients connected',
+            num_alive=len(sat_alive),
+            num_connected=len(sat_connected),
+            total=num_satellites
+        )
         sync_server.send('master alive: ' + ray_ip_address())
 
     ray.init(redis_address='localhost:{}'.format(port), **ray_kwargs)
