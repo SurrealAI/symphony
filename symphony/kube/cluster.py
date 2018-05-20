@@ -179,18 +179,27 @@ class KubeCluster(Cluster):
         return out
 
     def _parse_container_state_info(self, state, state_info):
-        if state == 'waiting':
-            return 'waiting: {}'.format(state_info.reason)
-        elif state == 'running':
-            return 'running: {}'.format(self._get_age(state_info.startedAt))
-        elif state == 'completed' or state == 'terminated':
-            return '{} ({}) after {}: {}' \
-                .format(state,
-                        state_info.exitCode,
-                        self._get_age(state_info.startedAt, state_info.finishedAt),
-                        state_info.reason)
-        else:
-            print('UNKONWN state:', state, state_info)
+        try:
+            if state == 'waiting':
+                return 'waiting: {}'.format(state_info.reason)
+            elif state == 'running':
+                return 'running: {}'.format(self._get_age(state_info.startedAt))
+            elif state == 'completed' or state == 'terminated':
+                if state_info.startedAt:
+                    return '{} ({}) after {}: {}' \
+                        .format(state,
+                                state_info.exitCode,
+                                self._get_age(state_info.startedAt, state_info.finishedAt),
+                                state_info.reason)
+                else:
+                    # The case {'startedAt': None, 'exitCode': 0, 'finishedAt': None}
+                    return '{} ({})'.format(state, state_info.exitCode)
+            else:
+                print('UNKONWN state:', state, state_info)
+        except Exception as e:
+            print('Unparsable state: {}'.format(state))
+            print(state_info)
+            raise e
 
     def _get_age(self, start_time_str, finish_time_str=None):
         """
@@ -307,7 +316,7 @@ class KubeCluster(Cluster):
                     process_group=process_group,
                     follow=follow, since=since, tail=tail, print_logs=print_logs
                 )
-            if stat['Restarts'] > 0:
+            if int(stat['Restarts']) > 0:
                 print('Container has a restart. There is probably something wrong. Exiting.')
                 return
             time.sleep(sleep_interval)
