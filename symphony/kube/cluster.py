@@ -294,7 +294,10 @@ class KubeCluster(Cluster):
             try:
                 stat = stats_dict[process_group][process_name]
             except KeyError as e:
-                raise KeyError('process_group or process_name not found: {}'.format(e))
+                print("Waiting for pod and container creation.")
+                time.sleep(sleep_interval)
+                continue
+                # raise KeyError('process_group or process_name not found: {}'.format(e))
 
             if stat['Ready'] == '1' and stat['State'].startswith('running'):
                 # pod is alive
@@ -304,6 +307,9 @@ class KubeCluster(Cluster):
                     process_group=process_group,
                     follow=follow, since=since, tail=tail, print_logs=print_logs
                 )
+            if stat['Restarts'] > 0:
+                print('Container has a restart. There is probably something wrong. Exiting.')
+                return
             time.sleep(sleep_interval)
 
     def external_url(self, experiment_name, service_name):
