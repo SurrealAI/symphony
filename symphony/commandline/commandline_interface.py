@@ -485,8 +485,8 @@ class SymphonyParser(object):
         kubectl cp /my/local/file mynamespace/nonagent:/remote/file -c learner
         """
         exp = self._get_experiment(args)
-        src_p, src_pg, src_path = self._format_scp_path(args.src_file, exp)
-        dest_p, dest_pg, dest_path = self._format_scp_path(args.dest_file, exp)
+        src_pg, src_p , src_path = self._format_scp_path(args.src_file, exp)
+        dest_pg, dest_p, dest_path = self._format_scp_path(args.dest_file, exp)
         assert (src_p is None) != (dest_p is None), \
             '[Error] one of "src_file" and "dest_file" must be remote and the other local.'
         self.cluster.transfer_file(exp, src_path, dest_path, src_process=src_p,

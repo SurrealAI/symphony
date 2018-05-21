@@ -74,7 +74,7 @@ class KubeCluster(Cluster):
                                            self._get_ns_cmd(experiment_name))
         runner.run_raw(cmd, print_cmd=True)
 
-    def _format_scp_path(self, pg, p, path):
+    def _format_scp_path(self, p, pg, path):
         if p is None:
             return path
         else:
