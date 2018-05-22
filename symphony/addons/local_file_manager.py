@@ -7,11 +7,15 @@ from benedict.data_format import dump_yaml_str, load_yaml_file
 
 class LocalFileManager:
     def __init__(self):
+        pass
+
+    @property
+    def data_root(self):
         folder = SymphonyConfig().experiment_folder
         if folder:
-            self.data_root = Path(expanduser(folder))
+            return Path(expanduser(folder))
         else:
-            self.data_root = None
+            return None
 
     def has_experiment_folder(self):
         return self.data_root is not None
