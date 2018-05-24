@@ -108,7 +108,7 @@ class DockerBuilder:
         self.copy_dockerfile()
         # Copy all temporary files
         for k, v in self.context_directories.items():
-            self.retrieve_directory(**v)
+            self.retrieve_context(**v)
 
         _log.info('start building', self.dockerfile)
         response = self.client.build(
@@ -184,7 +184,7 @@ class DockerBuilder:
         self.tag(repo, tag=tag)
         self.push(repo, tag=tag)
 
-    def retrieve_directory(self, name, path, force_update):
+    def retrieve_context(self, name, path, force_update):
         """
         Copy a directory to temp_file_path
         Args:
@@ -203,9 +203,15 @@ class DockerBuilder:
                 return
         source = path
         target = str(target_path)
-        _log.infofmt('cp -r {} {}', source, target)
-        shutil.copytree(source, target)
-        return
+
+        if Path(source).is_dir():
+            _log.infofmt('cp -r {} {}', source, target)
+            shutil.copytree(source, target)
+        elif Path(source).is_file():
+            _log.infofmt('cp {} {}', source, target)
+            shutil.copyfile(source, target)
+        else:
+            raise ValueError('Context {} is neither a file nor a direcotry.'.format(source))
 
     def copy_dockerfile(self):
         """
