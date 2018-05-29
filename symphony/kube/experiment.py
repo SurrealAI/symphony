@@ -1,6 +1,7 @@
 import copy
 from symphony.spec import ExperimentSpec
 from symphony.engine.address_book import AddressBook
+from symphony.utils.common import compact_range_dumps, compact_range_loads
 from symphony.utils.common import sanitize_name_kubernetes
 from .process import KubeProcessSpec
 from .process_group import KubeProcessGroupSpec
@@ -123,34 +124,3 @@ class KubeExperimentSpec(ExperimentSpec):
         data['port_range'] = compact_range_dumps(self.port_range)
         return data
 
-
-def compact_range_dumps(li):
-    """
-    Accepts a list of integers and represent it as intervals
-    [1,2,3,4,6,7] => '1-4,6-7'
-    """
-    li = sorted(li)
-    low = None
-    high = None
-    collections = []
-    for i,number in enumerate(li):
-        number = li[i]
-        if low is None:
-            low = number
-            high = number
-        elif high + 1 == number:
-            high = number
-        else:
-            collections.append('{}-{}'.format(low, high))
-            low = None
-            high = None
-    collections.append('{}-{}'.format(low, high))
-    return ','.join(collections)
-
-
-def compact_range_loads(description):
-    specs = [x.split('-') for x in description.split(',')]
-    li = []
-    for low, high in specs:
-        li += list(range(int(low), int(high)))
-    return li

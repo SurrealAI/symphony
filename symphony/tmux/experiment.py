@@ -1,6 +1,7 @@
 import os
 import copy
 from symphony.spec import ExperimentSpec
+from symphony.utils.common import compact_range_dumps, compact_range_loads
 from symphony.utils.common import print_err
 from symphony.engine import AddressBook
 from .common import tmux_name_check
@@ -44,9 +45,13 @@ class TmuxExperimentSpec(ExperimentSpec):
             self.preamble_cmds = list(preamble_cmds)
 
     def _new_process(self, *args, **kwargs):
+        if 'start_dir' not in kwargs:
+            kwargs['start_dir'] = self.start_dir
         return TmuxProcessSpec(*args, **kwargs)
 
     def _new_process_group(self, *args, **kwargs):
+        if 'start_dir' not in kwargs:
+            kwargs['start_dir'] = self.start_dir
         return TmuxProcessGroupSpec(*args, **kwargs)
 
     def compile(self):
@@ -109,7 +114,6 @@ class TmuxExperimentSpec(ExperimentSpec):
                     raise ValueError('Service {} is connected by process {} but not binded' \
                                      .format(connected_service_name, process.name))
 
-
     # TODO: factor code
     def get_port(self, port_range):
         if len(port_range) == 0:
@@ -117,10 +121,15 @@ class TmuxExperimentSpec(ExperimentSpec):
                                 .format(self.name))
         return port_range.pop(0)
 
-    # TODO
-    @classmethod
-    def load_dict(cls):
-        pass
+    def _load_dict(self, di):
+        super()._load_dict(di)
+        self.port_range = compact_range_loads(di['port_range'])
+        self.start_dir = di['start_dir']
+        self.preamble_cmds = di['preamble_cmds']
 
     def dump_dict(self):
-        pass
+        data = super().dump_dict()
+        data['port_range'] = compact_range_dumps(self.port_range)
+        data['start_dir'] = self.start_dir
+        data['preamble_cmds'] = self.preamble_cmds
+        return data

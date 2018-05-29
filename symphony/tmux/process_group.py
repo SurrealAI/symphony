@@ -32,9 +32,13 @@ class TmuxProcessGroupSpec(ProcessGroupSpec):
     def _new_process(self, *args, **kwargs):
         return TmuxProcessSpec(*args, **kwargs)
 
-    @classmethod
-    def load_dict(cls):
-        pass
+    def _load_dict(self, di):
+        super()._load_dict(di)
+        self.start_dir = di['start_dir']
+        self.preamble_cmds = di['preamble_cmds']
 
     def dump_dict(self):
-        pass
+        di = super().dump_dict()
+        di['start_dir'] = self.start_dir
+        di['preamble_cmds'] = self.preamble_cmds
+        return di
