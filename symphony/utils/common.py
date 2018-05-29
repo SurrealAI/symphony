@@ -83,3 +83,33 @@ def deduplicate_with_order(seq):
     deduplicate list while preserving order
     """
     return list(OrderedDict.fromkeys(seq))
+
+def compact_range_dumps(li):
+    """
+    Accepts a list of integers and represent it as intervals
+    [1,2,3,4,6,7] => '1-4,6-7'
+    """
+    li = sorted(li)
+    low = None
+    high = None
+    collections = []
+    for i,number in enumerate(li):
+        number = li[i]
+        if low is None:
+            low = number
+            high = number
+        elif high + 1 == number:
+            high = number
+        else:
+            collections.append('{}-{}'.format(low, high))
+            low = None
+            high = None
+    collections.append('{}-{}'.format(low, high))
+    return ','.join(collections)
+
+def compact_range_loads(description):
+    specs = [x.split('-') for x in description.split(',')]
+    li = []
+    for low, high in specs:
+        li += list(range(int(low), int(high)+1))
+    return li
