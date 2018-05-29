@@ -3,6 +3,7 @@ Symphony aims to ease the process of launching and monitoring multi-process / mu
 
 # Index
 [kubernetes](docs/kubernetes.md)
+[tmux](docs/tmux.md)
 
 # Installation
 

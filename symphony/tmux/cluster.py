@@ -8,7 +8,7 @@ from symphony.tmux.experiment import TmuxExperimentSpec
 from symphony.errors import *
 
 
-_SERVER_NAME = 'default'
+_SERVER_NAME = '__symphony__'
 _DEFAULT_WINDOW = '__main__'
 
 
