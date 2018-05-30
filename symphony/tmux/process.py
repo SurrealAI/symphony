@@ -35,9 +35,13 @@ class TmuxProcessSpec(ProcessSpec):
         for k, v in di.items():
             self.env[k] = str(v)
 
-    @classmethod
-    def load_dict(cls):
-        pass
+    def _load_dict(self, di):
+        super()._load_dict(di)
+        self.start_dir = di['start_dir']
+        self.cmds = di['cmds']
 
     def dump_dict(self):
-        pass
+        di = super().dump_dict()
+        di['start_dir'] = self.start_dir
+        di['cmds'] = self.cmds
+        return di

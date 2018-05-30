@@ -4,8 +4,8 @@ You can use symphony as a templating engine for running tasks on kubernetes. All
 # Run experiment.py
 from symphony.engine import Cluster
 from symphony.kube import KubeCluster
-cluster = Cluster.new('kubernetes') # cluster is a TmuxCluster
-exp = cluster.new_experiment('rl') # exp is a TmuxExperimentSpec
+cluster = Cluster.new('kubernetes') # cluster is a KubeCluster
+exp = cluster.new_experiment('rl') # exp is a KubeExperimentSpec
 learner = exp.new_process('learner', container_image='ubuntu:16,04', command='python', args=['learner.py'])
 agent = exp.new_process('agent', container_image='ubuntu:16,04', command='python', args=['agent.py', '--env', 'half-cheetah']) # agent, learner are a KubeProcessSpec
 learner.binds('replay-server')
@@ -13,7 +13,7 @@ learner.binds('parameter-server')
 agent.connects('replay-server')
 agent.connects('parameter-server')
 learner.exposes('tensorboard')
-cluster.launch(exp) # Runs agent.py and learner.py in two tmux sessions
+cluster.launch(exp) # Runs agent.py and learner.py
 ```
 Kubernetes uses yaml to specify each component to launch, our API closely reflects that. It is highly recommended that you go read the documentations on [kubernetes official website](https://kubernetes.io). 
 
