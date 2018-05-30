@@ -114,17 +114,14 @@ class DockerBuilder:
         response = self.client.build(
             path=str(self.temp_directory), decode=True, tag=tag
         )
-        last_event = None
         for line_parsed in response:
             self._print_docker_output(line_parsed)
-            last_event = line_parsed
-
-        if last_event is not None and 'stream' in last_event:
-            match = re.search(r'Successfully built ([0-9a-f]+)',
-                              last_event.get('stream', ''))
-            if match:
-                image_id = match.group(1)
-                self.img = image_id
+            if line_parsed is not None and 'stream' in line_parsed:
+                match = re.search(r'Successfully built ([0-9a-f]+)',
+                                  line_parsed.get('stream', ''))
+                if match:
+                    image_id = match.group(1)
+                    self.img = image_id
 
     def _print_docker_output(self, line_parsed):
         """
@@ -196,8 +193,12 @@ class DockerBuilder:
         target_path = self.temp_directory / name
         if target_path.exists():
             if force_update:
-                _log.info("Removing cached files at", target_path)
-                shutil.rmtree(str(target_path))
+                if target_path.is_dir():
+                    _log.info("Removing cached files at", target_path)
+                    shutil.rmtree(str(target_path))
+                else:
+                    _log.info("Removing cached file at", target_path)
+                    os.remove(str(target_path))
             else:
                 _log.info("Using cached files at", target_path)
                 return
