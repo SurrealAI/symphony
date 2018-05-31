@@ -70,7 +70,7 @@ def _prune_images(force):
             print('No images to prune')
 
 
-def delete_images(to_delete, force):
+def _delete_images(to_delete, force):
     """
     Args:
         to_delete(list): list of docker rmi targets
@@ -124,7 +124,7 @@ def _clean_images_re(re_exp_strs,
     if len(to_delete) == 0:
         print('No images found.')
     else:
-        delete_images(to_delete, force)
+        _delete_images(to_delete, force)
     _prune_images(force_prune_images)
 
 
