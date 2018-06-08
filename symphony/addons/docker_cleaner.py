@@ -93,7 +93,7 @@ def _match_res(string, re_exps):
     for re_exp in re_exps:
         if re_exp.match(string):
             return True
-        return False
+    return False
 
 
 def _match_images(re_exps):
@@ -108,7 +108,6 @@ def _match_images(re_exps):
                 for tag in image['RepoTags']:
                     if _match_res(tag, re_exps):
                         to_delete.append(tag)
-                        break
     return to_delete
 
 
