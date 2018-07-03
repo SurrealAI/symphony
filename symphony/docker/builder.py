@@ -21,7 +21,6 @@ class DockerServiceYML(DockerConfigYML):
         self.name = name
         self.data = BeneDict({
             'image': container_image,
-            # 'env': [{'name': 'SYMPHONY_ROLE', 'value': name}],
         })
 
     @classmethod
@@ -40,10 +39,6 @@ class DockerServiceYML(DockerConfigYML):
         return di
 
     def yml(self):
-        # named_dict = BeneDict({
-        #     self.name: self.data
-        # })
-        # return named_dict.dump_yaml_str()
         return self.data.dump_yaml_str()
 
     def set_env(self, name, value):
@@ -67,12 +62,6 @@ class DockerServiceYML(DockerConfigYML):
         if 'ports' not in self.data.keys():
             self.data['ports'] = []
         self.data['ports'].extend(ports)
-
-    # def mount_host_path(self, path, mount_path, hostpath_type='', name=None):
-    #     if name is None:
-    #         name = path.split('/')[-1]
-    #     v = KubeHostPathVolume(name=name, path=path, hostpath_type=hostpath_type)
-    #     self.mount_volume(v, mount_path)
 
 
 

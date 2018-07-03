@@ -1,0 +1,24 @@
+services:
+  client-2:
+    environment:
+      TEST_HOST: server-group--server-1
+      TEST_PORT: 1234
+    hostname: client-2
+    image: docker_client
+  client-group--client-1:
+    environment:
+      TEST_HOST: server-group--server-1
+      TEST_PORT: 1234
+    hostname: client-1
+    image: docker_client
+  server-group--server-1:
+    environment:
+      TEST_PORT: 1234
+    hostname: server-1
+    image: docker_server
+    ports:
+    - 1234:4321
+    - 10
+    - 55555
+version: '3'
+

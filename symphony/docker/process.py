@@ -43,22 +43,3 @@ class DockerProcessSpec(ProcessSpec):
 
     def set_ports(self, ports):
         self.service_yml.set_ports(ports)
-
-    # def set_envs(self, di):
-    #     self.container_yml.set_envs(di)
-
-    # def mount_volume(self, volume, mount_path):
-    #     self.container_yml.mount_volume(volume, mount_path)
-
-    # def mount_nfs(self, server, path, mount_path, name=None):
-    #     self.container_yml.mount_nfs(server, path, mount_path, name)
-    #
-    # def mount_git_repo(self, repository, revision, mount_path, name=None):
-    #     self.container_yml.mount_git_repo(repository, revision, mount_path, name)
-    #
-    # def mount_host_path(self, path, mount_path, hostpath_type='', name=None):
-    #     self.container_yml.mount_host_path(path, mount_path, hostpath_type, name)
-    #
-    # def mount_empty_dir(self, name, use_memory, mount_path):
-    #     self.container_yml.mount_empty_dir(mount_path, use_memory, name)
-
