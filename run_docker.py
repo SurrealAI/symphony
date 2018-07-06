@@ -1,3 +1,6 @@
+from pprint import PrettyPrinter
+pprint = PrettyPrinter(indent=2).pprint
+
 from symphony.docker import *
 from symphony.engine import *
 
@@ -25,7 +28,12 @@ server1.set_env('TEST_PORT', 1234)
 server1.set_ports(['1234:4321', 10, 55555])
 
 cluster.launch(exp)
-# cluster.delete(exp)
+# cluster.delete(exp.name)
 # print(cluster.list_experiments())
-# cluster.describe_experiment(exp.name)
-
+# pprint(cluster.describe_experiment(exp.name))
+# pprint(cluster.describe_experiment('empty'))
+# pprint(cluster.describe_process_group('exp1', 'server-group'))
+# pprint(cluster.describe_process_group('empty', 'server-group'))
+# pprint(cluster.describe_process('exp1', 'client-2'))
+# cluster.get_log('exp1', 'server-1', follow=True, tail=10)
+# print(cluster.exec_command('exp1', 'server-1', 'hostname'))

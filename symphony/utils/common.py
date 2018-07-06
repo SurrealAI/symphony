@@ -94,6 +94,16 @@ def check_valid_hostname(name):
 def get_grouped_docker_process_name(group_name, process_name):
     return DOCKER_DELIMITER.join([group_name, process_name])
 
+def split_docker_process_name(name):
+    if DOCKER_DELIMITER in name:
+        group_name, proc_name = name.split(DOCKER_DELIMITER)
+    else:
+        group_name = None
+        proc_name = name
+
+    idx = proc_name.rfind('_')
+    return group_name, proc_name[:idx]
+
 def sanitize_name_docker(name, verbose=True):
     """
     Sanitizes Process names for Docker Compose backend to be valid host names.
