@@ -1,7 +1,5 @@
-import json
 import os
-
-from symphony.zmq import *
+from caraml.zmq import *
 
 
 def handler(msg):
@@ -13,11 +11,11 @@ def handler(msg):
 
 def main():
     port = os.environ['TEST_PORT']
-    listen_add = 'tcp://*:{}'.format(port)
+    listen_addr = 'tcp://*:{}'.format(port)
     server = ZmqServer(
-        listen_add,
-        serializer=json.dumps,
-        deserializer=json.loads
+        address=listen_addr,
+        serializer='json',
+        deserializer='json'
     )
     print('Server initialized', flush=True)
     s = server.socket
