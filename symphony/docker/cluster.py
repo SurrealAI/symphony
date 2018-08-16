@@ -238,10 +238,10 @@ class DockerCluster(Cluster):
             group_name, proc_name = split_docker_process_name(grouped_name)
             return self._container_info(container)
 
-    def get_log(self, exp_name, process_name, process_group_name=None,
+    def get_log(self, experiment_name, process_name, process_group=None,
                 follow=False, since=None, tail=None, print_logs=False):
-        containers = self._get_containers(exp_name,
-                                          group_name=process_group_name,
+        containers = self._get_containers(experiment_name,
+                                          group_name=process_group,
                                           process_name=process_name)
         if not containers:
             return ''
@@ -258,7 +258,10 @@ class DockerCluster(Cluster):
                 'streams the log to stdout. Did you mean to also set '
                 'print_logs=True ?')
         else:
-            log = container.logs(tail=tail, since=since)
+            if isinstance(since, int) and since > 0:
+                log = container.logs(tail=tail, since=since)
+            else:
+                log = container.logs(tail=tail)
             if print_logs:
                 print(log.decode('utf-8'))
             return log
