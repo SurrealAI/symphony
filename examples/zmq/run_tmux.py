@@ -2,7 +2,7 @@ import symphony
 from symphony.engine import Cluster
 from symphony.tmux import TmuxCluster
 
-cluster = Cluster.new('tmux')
+cluster = Cluster.new('tmux', server_name='default')
 exp = cluster.new_experiment('hello-world')
 server = exp.new_process('server', cmds=['source activate symphony', 'python run_simple_client.py'])
 client = exp.new_process('client', cmds=['source activate symphony', 'python run_simple_server.py'])
