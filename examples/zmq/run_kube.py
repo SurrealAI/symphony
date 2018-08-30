@@ -1,8 +1,7 @@
 from symphony.engine import Cluster
 from symphony.kube import KubeCluster
 from symphony.commandline import SymphonyParser
-
-UPSTREAM_URL_ROOT = 'us.gcr.io/jimfan2018-208323/symphony-demo'
+from settings import UPSTREAM_URL
 
 
 class KubeParser(SymphonyParser):
@@ -21,13 +20,13 @@ class KubeParser(SymphonyParser):
         exp = cluster.new_experiment(args.experiment_name)
         client = exp.new_process(
             'client',
-            container_image=UPSTREAM_URL_ROOT+':latest',
+            container_image=UPSTREAM_URL+':latest',
             command=['python'],
             args=['-u', '/run_simple_client.py']
         )
         server = exp.new_process(
             'server',
-            container_image=UPSTREAM_URL_ROOT+':latest',
+            container_image=UPSTREAM_URL+':latest',
             command=['python'],
             args=['-u', '/run_simple_server.py']
         )
