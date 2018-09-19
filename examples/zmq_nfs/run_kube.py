@@ -1,7 +1,6 @@
 from symphony.engine import Cluster
-from symphony.kube import KubeCluster
 from symphony.commandline import SymphonyParser
-from settings import UPSTREAM_URL
+from nfs_settings import *
 
 
 class KubeParser(SymphonyParser):
@@ -36,7 +35,15 @@ class KubeParser(SymphonyParser):
         
         server.binds('example')
         client.connects('example')
+
+        # Mount nfs
+        for proc in exp.list_all_processes():
+            proc.mount_nfs(
+                server=NFS_SERVER, path=NFS_PATH_ON_SERVER, mount_path=NFS_MOUNT_PATH
+            )
+
         cluster.launch(exp)
+
 
 if __name__ == '__main__':
     print("---")

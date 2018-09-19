@@ -1,10 +1,11 @@
-from caraml.zmq import *
 import os
 import json
+from caraml.zmq import *
+from nfs_settings import *
 
 
 def handler(msg):
-    print('handling', msg)
+    print_and_write('server.txt', 'handling', msg)
     msg['counter'] += 1
     msg['scream'] += 'a'
     return msg
@@ -17,8 +18,8 @@ server = ZmqServer(
     serializer='json',
     deserializer='json'
 )
-print('Server initialized')
+print_and_write('server.txt', 'Server initialized')
 s = server.socket
-print(s.address, s.host, s.port)
-print('Starting event loop')
+print_and_write('server.txt', s.address, s.host, s.port)
+print_and_write('server.txt', 'Starting event loop')
 server.start_event_loop(handler, blocking=True)

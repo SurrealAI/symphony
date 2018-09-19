@@ -1,6 +1,7 @@
-from caraml.zmq import *
 import os
 import time
+from caraml.zmq import *
+from nfs_settings import *
 
 
 client = ZmqClient(
@@ -10,13 +11,14 @@ client = ZmqClient(
     deserializer='json'
 )
 s = client.socket
-print(s.address, s.host, s.port)
+print_and_write('client.txt', s.address, s.host, s.port)
 
 msg = {'counter': 10, 'scream': 'hello'}
 
-for _ in range(20):
+for i in range(20):
     time.sleep(.5)
     msg = client.request(msg)
+    print_and_write('client.txt', 'client request', i)
 
 while True:  # block
     time.sleep(100000)

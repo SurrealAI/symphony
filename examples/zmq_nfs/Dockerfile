@@ -7,5 +7,5 @@ COPY symphony /symphony
 COPY caraml /caraml
 RUN pip install -e /symphony/
 RUN pip install -e /caraml/
-COPY /symphony/examples/zmq/ /
+COPY /symphony/examples/zmq_nfs/ /
 

@@ -20,7 +20,7 @@ def _logger(verbose):
 
 
 class TmuxCluster(Cluster):
-    def __init__(self, server_name=None):
+    def __init__(self, server_name='default'):
         """
         Args:
             server_name: name of the new Tmux server (i.e. socket_name)

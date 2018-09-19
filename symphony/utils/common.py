@@ -6,6 +6,10 @@ from collections import OrderedDict
 import yaml
 
 
+# Delimiter between process group and process names for Docker Compose backend.
+DOCKER_DELIMITER = '--'
+
+
 def merge_dict(d, u):
     for k, v in u.items():
         if isinstance(v, collections.Mapping):
@@ -45,6 +49,64 @@ def print_err(*args, **kwargs):
 def sanitize_name_kubernetes(name, verbose=True):
     """
         Transform name to lowercase, replace '.', ' ' and '_' to '-'
+    Args:
+        name: the name to be sanitized
+        verbose: print warning message when the name is replaced
+    """
+    sanitized_name = name
+    sanitized_name = sanitized_name.lower()
+    sanitized_name = sanitized_name.replace(' ', '-')
+    sanitized_name = sanitized_name.replace('_', '-')
+    sanitized_name = sanitized_name.replace('.', '-')
+    if sanitized_name != name and verbose:
+        print('[Warning] Name {} is replaced by {}.'.format(name, sanitized_name))
+    check_valid_dns(sanitized_name)
+    return sanitized_name
+
+def check_valid_project_name(name):
+    """
+    Checks if the name is a valid project name for Docker Compose backend.
+    Args:
+        name: the name to be checked.
+    """
+    hostname_regex = re.compile('^[a-z][a-z0-9]*$')
+    if not hostname_regex.match(name):
+        raise ValueError(name + ' must be a project name with only '
+                         'lower-case alphanumeric letterse. '
+                         'No hyphen, underscore, dot or whitespace is allowed.')
+
+def check_valid_hostname(name):
+    """
+    Checks if the name is a valid host name for Docker Compose backend.
+    Args:
+        name: the name to be checked.
+    """
+    if DOCKER_DELIMITER in name:
+        raise ValueError('Delimiter "{}" is reserved by Symphony.'
+                .format(DOCKER_DELIMITER))
+
+    hostname_regex = re.compile('^[a-z0-9][-a-z0-9]*$')
+    if not hostname_regex.match(name):
+        raise ValueError(name + ' must be a valid DNS name with only '
+                         'lower-case alphanumeric letters and hyphen. '
+                         'No underscore, dot or whitespace is allowed.')
+
+def get_grouped_docker_process_name(group_name, process_name):
+    return DOCKER_DELIMITER.join([group_name, process_name])
+
+def split_docker_process_name(name):
+    if DOCKER_DELIMITER in name:
+        group_name, proc_name = name.split(DOCKER_DELIMITER)
+    else:
+        group_name = None
+        proc_name = name
+
+    idx = proc_name.rfind('_')
+    return group_name, proc_name[:idx]
+
+def sanitize_name_docker(name, verbose=True):
+    """
+    Sanitizes Process names for Docker Compose backend to be valid host names.
     Args:
         name: the name to be sanitized
         verbose: print warning message when the name is replaced

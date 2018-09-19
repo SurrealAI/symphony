@@ -1,6 +1,6 @@
 import os.path as op
-from settings import *
 from symphony.addons import DockerBuilder
+from nfs_settings import UPSTREAM_URL
 
 
 settings = {
