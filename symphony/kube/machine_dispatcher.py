@@ -35,14 +35,22 @@ class GKEMachineDispatcher:
         Returns the terraform json entry of the nodepool with @name
         """
         if not name in self.node_pools:
-            raise KeyError("Cannot find node pool {}, available:\n{}"\
-                  .format(name, ',\n'.join(self.get_nodepools())))
+            raise KeyError("Cannot find node pool {}, available:\n{}"
+                           .format(name, ',\n'.join(self.get_nodepools())))
         return self.node_pools[name]
 
-    def assign_to_nodepool(self, process, node_pool_name, *, process_group=None, exclusive=True):
+    def assign_to_nodepool(self,
+                           process,
+                           node_pool_name,
+                           *,
+                           process_group=None,
+                           exclusive=True):
         """
         Assigns a symphony process to a machine on the specific node pool
-        @exclusive: When true, claim all available resoruces on this node
+        Args:
+            exclusive: When true, claim all available resoruces on this node
+                On gpu machines, claim resources for one gpu when
+                applicable
         """
         if not node_pool_name in self.node_pools:
             raise KeyError("Cannot find node pool {}".format(node_pool_name))
@@ -72,12 +80,19 @@ class GKEMachineDispatcher:
                 "key": "nvidia.com/gpu",
                 "operator": "Exists"
                 })
-
         if exclusive:
-            memory_str = '{}Mi'.format(int(memory_m / 2))
-            process.resource_request(cpu=cpu - 0.6, memory=memory_str)
+            # Exclusive by GPUS
+            if 'gpu_count' in np_labels:
+                num_gpus = np_labels['gpu_count']
+            else:
+                num_gpus = 1
+
+            memory_str = '{}Mi'.format(int(memory_m / (num_gpus + 1)))
+            cpu_share = (cpu - 0.6) / num_gpus
+            cpu_share = float(int(cpu_share * 1000)) / 1000
+            process.resource_request(cpu=cpu_share, memory=memory_str)
             if "gpu_count" in np_labels:
-                process.resource_limit(gpu=np_labels["gpu_count"])
+                process.resource_limit(gpu=1)
 
     def _check_required_labels(self, name, di):
         if "node_config" not in di:
