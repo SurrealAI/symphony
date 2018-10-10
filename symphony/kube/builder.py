@@ -404,6 +404,9 @@ class KubePodYML(KubeConfigYML):
             Add taint toleration to a pod
         """
         tolerations = self.data['spec'].get('tolerations', [])
+        for toleration in tolerations:
+            if toleration == kwargs:
+                return
         tolerations.append(kwargs)
         self.data['spec']['tolerations'] = tolerations
 
