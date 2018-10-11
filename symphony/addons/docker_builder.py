@@ -18,9 +18,6 @@ _log = nl.Logger.create_logger(
     stream='stderr'
 )
 
-def clean_images(repo, force=False):
-    client = docker.APIClient()
-    print(client.images())
 
 class DockerBuilder:
     """

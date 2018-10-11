@@ -134,7 +134,7 @@ def clean_images(fnmatch_strs,
     """
     Uses fnmatch format to find repo:tag pairs
     """
-    if isinstance(fnmatch_strs,str):
+    if isinstance(fnmatch_strs, str):
         fnmatch_strs = [fnmatch_strs]
     re_exps = [fnmatch.translate(x) for x in fnmatch_strs]
     _clean_images_re(re_exps, force, force_prune_containers, force_prune_images)

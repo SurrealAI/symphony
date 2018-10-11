@@ -1,5 +1,6 @@
 import json
 import copy
+from os.path import expanduser
 
 _REQUIRED_LABELS = ["name", "cpu", "memory_m"]
 _EFFECT_MAP = {
@@ -15,7 +16,7 @@ class GKEDispatcher:
         json is a dict or a str(in which case it is treated as a json file)
         """
         if not isinstance(tf_json, dict):
-            with open(str(tf_json), 'r') as f:
+            with open(expanduser(str(tf_json)), 'r') as f:
                 tf_json = json.load(f)
         self.tf_config = tf_json
         if "resource" not in self.tf_config or \
