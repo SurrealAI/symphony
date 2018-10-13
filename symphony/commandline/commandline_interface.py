@@ -42,17 +42,17 @@ class SymphonyParser(object):
         Main function that returns the configured parser
         """
         # Action api
-        self._setup_delete() #
-        self._setup_delete_batch() #
-        self._setup_scp() #
-        self._setup_ssh() #
-        self._setup_exec() #
+        self._setup_delete()
+        self._setup_delete_batch()
+        self._setup_scp()
+        self._setup_ssh()
+        self._setup_exec()
         # Query api
-        self._setup_list_experiments() #
-        self._setup_switch_experiment() #
-        self._setup_list_processes() #
-        self._setup_log() #
-        self._setup_visit() #
+        self._setup_list_experiments()
+        self._setup_switch_experiment()
+        self._setup_list_processes()
+        self._setup_log()
+        self._setup_visit()
 
     def add_subparser(self, name, aliases=None, **kwargs):
         """ Add a subparser with name @name

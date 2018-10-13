@@ -1,10 +1,4 @@
-import os
-from setuptools import setup
-
-
-# def read(fname):
-#     with open(os.path.join(os.path.dirname(__file__), fname)) as f:
-#         return f.read().strip()
+from setuptools import setup, find_packages
 
 
 setup(
@@ -15,7 +9,9 @@ setup(
     description='a distributed process orchestration platform that supports both laptop and major cloud providers',
     keywords=['Orchestration', 'Kubernetes', 'Tmux'],
     license='GPLv3',
-    packages=['symphony'],
+    packages=[
+        package for package in find_packages() if package.startswith("symphony")
+    ],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",

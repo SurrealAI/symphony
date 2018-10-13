@@ -1,7 +1,14 @@
 from symphony.spec import ProcessGroupSpec
 from symphony.utils.common import sanitize_name_kubernetes, strip_repository_name
 from .process import KubeProcessSpec
-from .builder import KubePodYML, KubeNFSVolume, KubeGitVolume, KubeHostPathVolume, KubeEmptyDirVolume
+from .builder import (
+    KubePodYML,
+    KubeNFSVolume,
+    KubeGitVolume,
+    KubeHostPathVolume,
+    KubeEmptyDirVolume,
+    KubeSecretVolume
+    )
 
 
 class KubeProcessGroupSpec(ProcessGroupSpec):
@@ -61,6 +68,15 @@ class KubeProcessGroupSpec(ProcessGroupSpec):
         if name is None:
             name = server
         v = KubeNFSVolume(name=name, server=server, path=path)
+        for process in self.list_processes():
+            process.mount_volume(v, mount_path)
+
+    def mount_secret(self, secret_name, mount_path, defaultMode=None, name=None):
+        if name is None:
+            name = secret_name
+        v = KubeSecretVolume(name=name,
+                             secret_name=secret_name,
+                             defaultMode=defaultMode)
         for process in self.list_processes():
             process.mount_volume(v, mount_path)
 

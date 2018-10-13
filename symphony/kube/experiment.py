@@ -5,30 +5,50 @@ from symphony.utils.common import compact_range_dumps, compact_range_loads
 from symphony.utils.common import sanitize_name_kubernetes
 from .process import KubeProcessSpec
 from .process_group import KubeProcessGroupSpec
-from .builder import KubeIntraClusterService, KubeCloudExternelService
+from .builder import (
+    KubeIntraClusterService,
+    KubeCloudExternelService,
+    KubeSecret
+    )
 
 
 class KubeExperimentSpec(ExperimentSpec):
     _ProcessClass = KubeProcessSpec
     _ProcessGroupClass = KubeProcessGroupSpec
 
-    def __init__(self, name, port_range=None):
+    def __init__(self,
+                 name,
+                 port_range=None,
+                 secrets=None):
+        """
+        Creates an experiment on kubernetes
+
+        Args:
+            name: name of experiments
+            port_range: range of port numbers to assign (default: 7000-9000)
+            secrets: list of files to mount as secrets (default: {None})
+        """
         name = sanitize_name_kubernetes(name)
         super().__init__(name)
         if port_range is None:
             port_range = list(range(7000, 9000))
+        if secrets is None:
+            secrets = []
         self.port_range = port_range
         self.binded_services = {}
         self.exposed_services = {}
+        self.secrets = secrets
 
     def _compile(self):
         self.address_book = AddressBook()
 
         self.declare_services()
         self.assign_addresses()
+        secrets = self.add_secret()
 
         components = {}
-
+        if secrets is not None:
+            components['secrets'] = secrets.yml()
         for k, v in self.exposed_services.items():
             components['exposed-service-' + k] = v.yml()
         for k, v in self.binded_services.items():
@@ -99,6 +119,18 @@ class KubeExperimentSpec(ExperimentSpec):
             self.binded_services[service.name] = service
         self.validate_connect()
 
+    def add_secret(self):
+        default_secret_name = 'symph-default-secret'
+        if len(self.secrets) > 0:
+            for process in self.list_all_processes():
+                process.mount_secret(secret_name=default_secret_name,
+                                     mount_path='/etc/secrets')
+            return KubeSecret.from_files(
+                        default_secret_name,
+                        files=self.secrets)
+        else:
+            return None
+
     def validate_connect(self):
         """
         Check if all connected services are correctly provided
@@ -118,9 +150,10 @@ class KubeExperimentSpec(ExperimentSpec):
     def _load_dict(self, di):
         super()._load_dict(di)
         self.port_range = compact_range_loads(di['port_range'])
+        self.secrets = di['secrets']
 
     def dump_dict(self):
         data = super().dump_dict()
         data['port_range'] = compact_range_dumps(self.port_range)
+        data['secrets'] = self.secrets
         return data
-

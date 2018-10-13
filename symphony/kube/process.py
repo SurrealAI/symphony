@@ -79,6 +79,9 @@ class KubeProcessSpec(ProcessSpec):
     def mount_nfs(self, server, path, mount_path, name=None):
         self.container_yml.mount_nfs(server, path, mount_path, name)
 
+    def mount_secret(self, secret_name, mount_path, defaultMode=None, name=None):
+        self.container_yml.mount_secret(secret_name, mount_path, defaultMode=defaultMode, name=name)
+
     def mount_git_repo(self, repository, revision, mount_path, name=None):
         self.container_yml.mount_git_repo(repository, revision, mount_path, name)
 

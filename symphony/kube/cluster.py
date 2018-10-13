@@ -104,8 +104,8 @@ class KubeCluster(Cluster):
             pod_name, container_name = process_name, process_name
         else:
             pod_name, container_name = process_group_name, process_name
-        return runner.run_raw('kubectl exec -ti {} -c {} {} -- {}'.format(pod_name,
-                              container_name, ns_cmd, command))
+        return runner.run_raw('kubectl exec -ti {} -c {} {} -- {}'
+                              .format(pod_name, container_name, ns_cmd, command))
 
     # ========================================================
     # ===================== Query API ========================

@@ -1,6 +1,9 @@
 import copy
-from symphony.utils.common import merge_dict, strip_repository_name
+import base64
+from os import path
+from pathlib import Path
 from benedict import BeneDict
+from symphony.utils.common import merge_dict, strip_repository_name
 
 
 class KubeConfigYML(object):
@@ -20,6 +23,45 @@ class KubeConfigYML(object):
         return self.data.dump_yaml_str()
 
 
+"""apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+type: Opaque
+data:
+  username: YWRtaW4=
+  password: MWYyZDFlMmU2N2Rm"""
+
+
+class KubeSecret(KubeConfigYML):
+    @classmethod
+    def from_files(cls, name, files):
+        data = {}
+        for file in files:
+            file = Path(path.expanduser(file))
+            if not file.exists():
+                raise FileNotFoundError('{} cannot be found'.format(file))
+            else:
+                key = file.name
+                with file.open('rb') as f:
+                    data[key] = base64.b64encode(f.read())
+
+        return KubeSecret(name, data)
+
+    def __init__(self, name, data):
+        self.name = name
+        self.data = data
+        self.data = BeneDict({
+            'apiVersion': 'v1',
+            'kind': 'Secret',
+            'metadata': {
+                'name': name,
+            },
+            'type': 'Opaque',
+            'data': data,
+            })
+
+
 class KubeService(KubeConfigYML):
     def __init__(self, name):
         super().__init__()
@@ -27,7 +69,7 @@ class KubeService(KubeConfigYML):
         self.data = BeneDict({
             'apiVersion': 'v1',
             'kind': 'Service',
-            'metadata':{
+            'metadata': {
                 'name': name,
                 'labels': {},
             },
@@ -177,6 +219,38 @@ class KubeNFSVolume(KubeVolume):
         }
 
 
+class KubeSecretVolume(KubeVolume):
+    def __init__(self, name, secret_name, defaultMode=None):
+        super().__init__(name)
+        self.name = name
+        self.secret_name = secret_name
+        # Kubernetes default secret permission is
+        # 420 in decimal, which is 644 in oct (rw-r--r--)
+        if defaultMode is None:
+            defaultMode = 420
+        self.defaultMode = defaultMode
+
+    def pod_spec(self):
+        """
+            Returns a spec to fall under Pod: spec:
+        """
+        return BeneDict({
+            'name': self.name,
+            'secret': {
+                'secretName': self.secret_name,
+                'defaultMode': self.defaultMode,
+            }
+        })
+
+    def save(self):
+        return {
+            'name': self.name,
+            'secret_name': self.secret_name,
+            'defaultMode': self.defaultMode,
+            'type': self.__class__.__name__
+        }
+
+
 class KubeGitVolume(KubeVolume):
     def __init__(self, name, repository, revision):
         super().__init__(name)
@@ -289,6 +363,18 @@ class KubeContainerYML(KubeConfigYML):
         if name is None:
             name = server
         v = KubeNFSVolume(name=name, server=server, path=path)
+        self.mount_volume(v, mount_path)
+
+    def mount_secret(self,
+                     secret_name,
+                     mount_path,
+                     defaultMode=None,
+                     name=None):
+        if name is None:
+            name = secret_name
+        v = KubeSecretVolume(name=name,
+                             secret_name=secret_name,
+                             defaultMode=defaultMode)
         self.mount_volume(v, mount_path)
 
     def mount_git_repo(self, repository, revision, mount_path, name=None):

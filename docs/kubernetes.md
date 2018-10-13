@@ -2,14 +2,14 @@
 [Concepts](#concepts)
 [Scheduling](#scheduling)
 [Manaully Update Yaml](#manually-update-yaml)
+[Secrets](#secrets)
 
 You can use symphony as a templating engine for running tasks on kubernetes. All basic apis are supported. Kubernetes runs docker containers, so you will need to provide a container image for every process. 
 ```python
 # Run experiment.py
-from symphony.engine import Cluster
-from symphony.kube import KubeCluster
-cluster = Cluster.new('kubernetes') # cluster is a KubeCluster
-exp = cluster.new_experiment('rl') # exp is a KubeExperimentSpec
+from symphony import Cluster, KubeCluster
+cluster = Cluster.new('kubernetes')  # cluster is a KubeCluster
+exp = cluster.new_experiment('rl')  # exp is a KubeExperimentSpec
 learner = exp.new_process('learner', container_image='ubuntu:16,04', command='python', args=['learner.py'])
 agent = exp.new_process('agent', container_image='ubuntu:16,04', command='python', args=['agent.py', '--env', 'half-cheetah']) # agent, learner are a KubeProcessSpec
 learner.binds('replay-server')
@@ -87,7 +87,6 @@ gcloud config set container/use_v1_api false
 gcloud beta containers node-pools describe nonagent-pool-cpu
 ```
 
-
 # Manually Update Yaml
 You can edit the yml directly by accessing:
 ```python
@@ -98,3 +97,10 @@ process.container_yml
 process_group.pod_yml
 process.container_yml
 ```
+
+# Secrets
+You can mount files as secrets to experiments using 
+```python
+experiment = cluster.new_experiment('foo', secrets=['~/.mjkey.txt'])
+```
+These files will be available in `/etc/secrets`.
