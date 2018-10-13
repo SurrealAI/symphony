@@ -1,4 +1,4 @@
-# Symphony: An orchestrating library that supports a variety of backends
+# Symphony: An orchestrating Library Supporting Multiple Backends
 Symphony aims to ease the process of launching and monitoring multi-process / multi-node computation tasks. It provides a simple abstraction for launching multiple processes in a centralized place and supports multiple backends (e.g. tmux and kubernetes). It also provides a set of essential commandline interfaces to monitor the status of the processes involved.
 
 # Index
@@ -15,6 +15,9 @@ Related docs
 (TODO: docker guide)
 
 # Installation
+```bash
+pip install symphony
+```
 
 # Motivation
 Symphony was developed initially to support [Surreal](https://github.com/SurrealAI/Surreal), a library for distributed reinforcement learning. We observe that there are certain features about distributed scientific computing that are shared and can be automated.

@@ -1,4 +1,7 @@
+libtmux
+nanolog
+docker
 pyyaml
 libtmux
-benedict
+benedict>=0.3
 nanolog
