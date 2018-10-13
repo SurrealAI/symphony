@@ -13,7 +13,6 @@ setup(
     author='Surreal AI team',
     url='https://github.com/SurrealAI/symphony',
     description='a distributed process orchestration platform that supports both laptop and major cloud providers',
-    # long_description=read('README.rst'),
     keywords=['Orchestration', 'Kubernetes', 'Tmux'],
     license='GPLv3',
     packages=['symphony'],
@@ -25,16 +24,14 @@ setup(
         "Programming Language :: Python :: 3"
     ],
     install_requires=[
-        "BeneDict>=0.3",
         "libtmux",
         "nanolog",
         "docker",
+        "pyyaml",
+        "libtmux",
+        "benedict>=0.3",
+        "nanolog",
     ],
-    entry_points={
-        'console_scripts': [
-            'symphony=symphony.symph:main',
-        ],
-    },
     python_requires='>=3.5',
     include_package_data=True,
     zip_safe=False

@@ -25,7 +25,7 @@ class TmuxCluster(Cluster):
         Args:
             server_name: name of the new Tmux server (i.e. socket_name)
         """
-        super().__init__() # just for linter's happiness
+        super().__init__()  # just for linter's happiness
         self._socket_name = server_name or _SERVER_NAME
         # Use /dev/null as config to ignore all user-specific settings.
         self._tmux = libtmux.Server(socket_name=self._socket_name,
@@ -101,8 +101,8 @@ class TmuxCluster(Cluster):
     def new_experiment(self, *args, **kwargs):
         return TmuxExperimentSpec(*args, **kwargs)
 
-    def launch(self, spec, dry_run=False):
-        _log = _logger(dry_run)
+    def launch(self, spec, dry_run=False, verbose=True):
+        _log = _logger(verbose)
         assert isinstance(spec, TmuxExperimentSpec)
 
         spec.compile()
@@ -136,6 +136,8 @@ class TmuxCluster(Cluster):
 
     # ===================== Action API =======================
     def delete(self, experiment_name):
+        if experiment_name is None:
+            experiment_name = self.current_experiment()
         sess = self._get_session(experiment_name)
         sess.kill_session()
 
@@ -166,6 +168,28 @@ class TmuxCluster(Cluster):
         raise NotImplementedError
 
     # ===================== Query API ========================
+    def set_experiment(self, experiment_name):
+        """
+        Args:
+            experiment_name(str): to be set to default
+        """
+        print('Tmux cluster does not persist current experiments.')
+        exit(0)
+
+    def current_experiment(self):
+        experiments = self.list_experiments()
+        if len(experiments) == 0:
+            print('No active experiments')
+            exit(0)
+        elif len(experiments) == 1:
+            return experiments[0]
+        else:
+            print('More than one experiments are active, please specify the experiment that you are querying for')
+            print('Active experiments:')
+            for experiment in experiments:
+                print('\t{}'.format(experiment))
+            exit(0)
+
     def list_experiments(self):
         """
         Returns:
@@ -193,6 +217,8 @@ class TmuxCluster(Cluster):
             }
         }
         """
+        if experiment_name is None:
+            experiment_name = self.current_experiment()
         sess = self._get_session(experiment_name)
         result = dict()
         for window in sess.windows:
@@ -230,6 +256,8 @@ class TmuxCluster(Cluster):
         Returns:
             {'status: 'live', 'timestamp': '23:34'}
         """
+        if experiment_name is None:
+            experiment_name = self.current_experiment()
         window = self._get_window(
                 experiment_name, process_name, group_name=process_group_name)
         # TODO: Add other attributes available from tmux
@@ -239,12 +267,14 @@ class TmuxCluster(Cluster):
 
     def get_log(self, experiment_name, process_name, process_group=None,
                 follow=False, since=None, tail=None, print_logs=False):
-        if follow:
-            raise ValueError(
-                    '[Error] "follow" is not supported for tmux backend')
-        if since:
-            raise ValueError(
-                    '[Error] "since" is not supported for tmux backend')
+        # if follow:
+            # raise Warning(
+                    # '[Warning] "follow" is not supported for tmux backend')
+        # if since:
+            # raise Warning(
+                    # '[Warning] "since" is not supported for tmux backend')
+        if experiment_name is None:
+            experiment_name = self.current_experiment()
         window = self._get_window(
                 experiment_name, process_name, group_name=process_group)
         pane = window.attached_pane

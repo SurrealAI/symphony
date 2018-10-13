@@ -265,5 +265,3 @@ class DockerCluster(Cluster):
             if print_logs:
                 print(log.decode('utf-8'))
             return log
-
-

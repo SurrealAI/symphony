@@ -322,11 +322,13 @@ class KubeCluster(Cluster):
             time.sleep(sleep_interval)
 
     def external_url(self, experiment_name, service_name):
-        res = BeneDict(self.query_resources('svc', 'yaml',
-                                  names=[service_name], namespace=experiment_name))
+        res = BeneDict(self.query_resources(
+                        'svc', 'yaml',
+                        names=[service_name], namespace=experiment_name))
         conf = res.status.loadBalancer
         if not ('ingress' in conf and 'ip' in conf.ingress[0]):
-            raise ValueError('Service {} not found in experiment {}'.format(service_name, experiment_name))
+            raise ValueError('Service {} not found in experiment {}'
+                .format(service_name, experiment_name))
         ip = conf.ingress[0].ip
         port = res.spec.ports[0].port
         return '{}:{}'.format(ip, port)

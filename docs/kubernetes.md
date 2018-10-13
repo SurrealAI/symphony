@@ -1,4 +1,8 @@
 # Kubernetes Guide
+[Concepts](#concepts)
+[Scheduling](#scheduling)
+[Manaully Update Yaml](#manually-update-yaml)
+
 You can use symphony as a templating engine for running tasks on kubernetes. All basic apis are supported. Kubernetes runs docker containers, so you will need to provide a container image for every process. 
 ```python
 # Run experiment.py
@@ -17,17 +21,59 @@ cluster.launch(exp) # Runs agent.py and learner.py
 ```
 Kubernetes uses yaml to specify each component to launch, our API closely reflects that. It is highly recommended that you go read the documentations on [kubernetes official website](https://kubernetes.io). 
 
-# Note
+# Concepts
 In kubernetes a pod is a atomic unit of running application instance. Each process without a process group is mapped to a pod with one container. Each process group is mapped to a pod with one container per process. When you are using a process group, all pod-related functionalities should be called on a process group instead of a process. 
 
-# Resource request
-Kubernetes has resource-request and resource-limit that allows one to request for cpu/memory/gpu. They are always configured on a process level.
+# Scheduling
+One of the most important aspects of running tasks on Kubernetes is to schedule workloads to the correct machine. Symphony provides both lower-level Kubernetes based scheduling mechanisms for fine grained control and a higher-level interface when the Kubernetes cluster is created by [Cloudwise](https://github.com/SurrealAI/cloudwise).
+
+* [Dispatcher (High Level Interface)](#dispatcher)
+
+* [Resource Request](#resource-request)
+* [Node Selector and Node Taint](#node-selector-and-node-taint)
+
+## Dispatcher
+`symphony.kube.GKEDispatcher` provides an abstract interface for scheduling. You can use it on clusters created by [Cloudwise](https://github.com/SurrealAI/cloudwise). After creating the cluster, you will obtain a `.tf.json` file. Provide the path to this file to the `GKEDispatcher` to configure the dispatcher instance. There are several scheduling options. For all these methods you need to provide the `symphony.kube.Process` and the `symphony.kube.ProcessGroup` containing this process (or `None` when the process does not belong to any process group).
+
+* Assign to machine. Claim enough resources to occupy a single machine exclusively. Also supports fractions.
 ```python
-proc.resource_request(cpu=1.5, mem='2G')
-proc.resource_limit(cpu=1.5, mem='2G', gpu=1) # gpu is mapped to nvidia.com/gpu
+# Occupies a machine in the CPU pool
+dispatcher.assign_to_machine(process, node_pool_name='cpu-pool')
+# Occupies 1/5 of a machine in the CPU pool
+dispatcher.assign_to_machine(process, node_pool_name='cpu-pool', process_per_machine=5)
+```
+* Assign to GPU. Claim enough resources to occupy a single GPU. This is implemented by claiming a 1/n fraction of a n-GPU machine.
+```python
+# Occupies a GPU and claim other resources proportionally
+dispatcher.assign_to_gpu(process, node_pool_name='gpu-pool')
+# If every machine has 4 GPUs in gpu-pool, this is equivalent to
+dispatcher.assign_to_machine(process, node_pool_name='gpu-pool', process_per_machine=4)
+```
+* Assign to resource. Claim specified resources on any applicable node pool in the cluster.
+```python
+dispatcher.assign_to_gpu(process, cpu=2.5, memory_m=4096, gpu_type='k80', gpu_count=2)
+```
+* Assign to node pool. Claim specified resources on a specified node pool.
+```python
+dispatcher.assign_to_node_pool(process, node_pool_name='gpu-pool-k80', cpu=2.5, memory_m=4096, gpu_count=2)
+```
+* Assign to \*. You can specify the mode in argument to the general `assign_to` function. This allows one to configure scheduling using config dictionaries.
+```python
+settings = {
+    assign_to = 'machine',
+    ...
+}
+dispatcher.assign_to(**settings)
 ```
 
-# Node selector
+## Resource request
+Kubernetes has resource-request and resource-limit that allows one to request for cpu/memory/gpu. They are always configured on a process (container) level.
+```python
+proc.resource_request(cpu=1.5, mem='2G')
+proc.resource_limit(cpu=1.5, mem='2G', gpu=1)  # gpu is mapped to nvidia.com/gpu
+```
+
+## Node selector and Node Taint
 Kubernetes allows you to select which machine you want to deploy your process/process group on. There are two selecting mechanisms: selector and taint. Each node has its selector and taint. A pod can be scheduled on to a node if:
 * For any node selector on the pod, the node satisfies it.
 * For any taint on the node, the pod tolerates the taint.
@@ -40,25 +86,9 @@ To look up selectors and taints, do
 gcloud config set container/use_v1_api false
 gcloud beta containers node-pools describe nonagent-pool-cpu
 ```
-(!! Internal only) Currently our node pools are configured as follows
-* n1-standard-2  
-Labels: surreal-node : agent  
-Taints: NO_EXECUTE surreal=true  
-* n1-highmem-8  
-Labels: surreal-node : nonagent-cpu  
-Taints: NO_EXECUTE surreal=true  
-* n1-highmem-8 1 k80  
-Labels: surreal-node : nonagent-gpu  
-Taints: gpu_taint, automatically added when a pod requests gpu
-* n1-standard-16 1 p100  
-Labels: surreal-node :  n1-standard-16-1p100  
-Taints: gpu_taint, automatically added when a pod requests gpu
-* n1-standard-16 1 p100  
-Labels: surreal-node : nonagent-gpu-2k80-16cpu  
-Taints: gpu_taint, automatically added when a pod requests gpu
 
 
-# Manual update
+# Manually Update Yaml
 You can edit the yml directly by accessing:
 ```python
 # If process does not belong to a process group
@@ -68,4 +98,3 @@ process.container_yml
 process_group.pod_yml
 process.container_yml
 ```
-
