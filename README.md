@@ -10,9 +10,10 @@ Symphony aims to ease the process of launching and monitoring multi-process / mu
 [Using Symphony for your project](#using-symphony-as-part-of-your-project)  
 
 ---
-Related docs
-[Kubernetes guide](docs/kubernetes.md)
-[Tmux guide](docs/tmux.md)
+Related docs:  
+[Docker builder guide](docs/docker_builder.md)
+[Kubernetes guide](docs/kubernetes.md)  
+[Tmux guide](docs/tmux.md)  
 (TODO: docker guide)
 
 # Installation
