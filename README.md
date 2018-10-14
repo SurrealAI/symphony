@@ -2,12 +2,13 @@
 Symphony aims to ease the process of launching and monitoring multi-process / multi-node computation tasks. It provides a simple abstraction for launching multiple processes in a centralized place and supports multiple backends (e.g. tmux and kubernetes). It also provides a set of essential commandline interfaces to monitor the status of the processes involved.
 
 # Index
-[Motivation](#motivation)
-[Concepts](#processes-experiments-clusters)
-[Networking](#networking)
-[Monitoring](#monitoring-through-the-commandline)
-[Config](#config)
-[Using Symphony for your project](#using-symphony-as-part-of-your-project)
+[Motivation](#motivation)  
+[Concepts](#processes-experiments-clusters)  
+[Networking](#networking)  
+[Monitoring](#monitoring-through-the-commandline)  
+[Config](#config)  
+[Using Symphony for your project](#using-symphony-as-part-of-your-project)  
+
 ---
 Related docs
 [Kubernetes guide](docs/kubernetes.md)
