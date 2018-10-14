@@ -24,3 +24,33 @@ context_directories: # These paths will be copied to temp_directory before build
     - `path`: Where to copy from. If it is a file, it is moved to `name` in the build folder. If it is a directory, the entire tree is copied.
     - `force_update`: If the file or directory already exists in the build context (e.g. from the last build), `force_update=True` will remove the existing files and copy from the file system again. `force_update=False` will use the cached versions. This is used to help speed up the build process when there are several custom libraries but only one is being actively worked on.
 
+## Using the docker builder
+You can load the settings in a dictionary and use it to initialize the docker builder. This builder can then build, tag and push the image.
+```python
+from symphony import DockerBuilder
+
+dockerfile = '~/surreal/symphony/test/test_docker_Dockerfile'
+context_directories = [
+    {
+        'name': 'surreal',
+        'path': '~/surreal/Surreal',
+        'force_update': False,
+    },
+    {
+        'name': 'tensorplex',
+        'path': '~/surreal/Tensorplex',
+        'force_update': True,
+    }
+]
+temp_directory = '~/symph_tmp/'
+repo = 'my_repo'
+tag = 'latest'
+
+builder = DockerBuilder(dockerfile, context_directories, temp_directory, verbose=True)
+
+builder.build()
+
+builder.tag(repo, tag)
+
+builder.push(repo, tag)
+```
