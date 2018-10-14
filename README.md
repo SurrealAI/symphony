@@ -11,7 +11,7 @@ Symphony aims to ease the process of launching and monitoring multi-process / mu
 
 ---
 Related docs:  
-[Docker builder guide](docs/docker_builder.md)
+[Docker builder guide](docs/docker_builder.md)  
 [Kubernetes guide](docs/kubernetes.md)  
 [Tmux guide](docs/tmux.md)  
 (TODO: docker guide)
