@@ -19,3 +19,4 @@ from .spec import (
     )
 from .docker import DockerCluster
 from .addons import DockerBuilder, clean_images
+from .commandline import SymphonyParser

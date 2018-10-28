@@ -76,7 +76,7 @@ class TestTmuxCluster(unittest.TestCase):
     def create_default_experiment(self, exp_preamble=[], group_preamble=[],
                                   launch=True):
         # Create and launch default experiment used by most test cases.
-        cluster = Cluster.new('tmux')
+        cluster = Cluster.new('tmux', server_name=_TEST_SERVER)
 
         # Create specs.
         exp = cluster.new_experiment('exp', preamble_cmds=exp_preamble)
@@ -92,7 +92,7 @@ class TestTmuxCluster(unittest.TestCase):
     #################### Spec tests ####################
 
     def test_config_validation(self):
-        cluster = Cluster.new('tmux')
+        cluster = Cluster.new('tmux', server_name=_TEST_SERVER)
 
         with self.assertRaises(ValueError):
             cluster.new_experiment(None)
@@ -122,10 +122,9 @@ class TestTmuxCluster(unittest.TestCase):
     #################### Launch API tests ####################
 
     def test_empty_experiment(self):
-        cluster = Cluster.new('tmux')
+        cluster = Cluster.new('tmux', server_name=_TEST_SERVER)
         exp = cluster.new_experiment('empty_exp')
         cluster.launch(exp)
-
         # Confirm the launch of experiment on tmux side.
         self.assertListEqual([s.name for s in self.server.sessions],
                              ['empty_exp'])
@@ -137,7 +136,6 @@ class TestTmuxCluster(unittest.TestCase):
 
     def test_launch_experiment(self):
         self.create_default_experiment()
-
         # Confirm the launch of experiment on tmux side.
         self.assertListEqual([s.name for s in self.server.sessions], ['exp'])
 
@@ -151,7 +149,7 @@ class TestTmuxCluster(unittest.TestCase):
         self.create_default_experiment()
 
         # Launch a second experiment.
-        cluster = Cluster.new('tmux')
+        cluster = Cluster.new('tmux', server_name=_TEST_SERVER)
         exp2 = cluster.new_experiment('exp2')
         cluster.launch(exp2)
 
@@ -172,7 +170,7 @@ class TestTmuxCluster(unittest.TestCase):
         self.create_default_experiment()
 
         # Attempt creating a session with duplicate name
-        cluster = Cluster.new('tmux')
+        cluster = Cluster.new('tmux', server_name=_TEST_SERVER)
         dupe = cluster.new_experiment('exp')
 
         with self.assertRaises(errors.ResourceExistsError):
@@ -189,14 +187,14 @@ class TestTmuxCluster(unittest.TestCase):
 
     def test_list_experiment(self):
         self.create_default_experiment()
-        cluster = Cluster.new('tmux')
+        cluster = Cluster.new('tmux', server_name=_TEST_SERVER)
 
         experiments = cluster.list_experiments()
         self.assertListEqual(experiments, ['exp'])
 
     def test_describe_experiment(self):
         self.create_default_experiment()
-        cluster = Cluster.new('tmux')
+        cluster = Cluster.new('tmux', server_name=_TEST_SERVER)
 
         with self.assertRaises(ValueError):
             cluster.describe_experiment('Irene')
@@ -219,7 +217,7 @@ class TestTmuxCluster(unittest.TestCase):
 
     def test_describe_process_group(self):
         self.create_default_experiment()
-        cluster = Cluster.new('tmux')
+        cluster = Cluster.new('tmux', server_name=_TEST_SERVER)
 
         with self.assertRaises(ValueError):
             cluster.describe_process_group('bad_exp', 'group')
@@ -243,7 +241,7 @@ class TestTmuxCluster(unittest.TestCase):
 
     def test_describe_process(self):
         self.create_default_experiment()
-        cluster = Cluster.new('tmux')
+        cluster = Cluster.new('tmux', server_name=_TEST_SERVER)
 
         with self.assertRaises(ValueError):
             cluster.describe_process('bad_exp', 'hello')
@@ -265,13 +263,13 @@ class TestTmuxCluster(unittest.TestCase):
 
     def test_get_log(self):
         self.create_default_experiment()
-        cluster = Cluster.new('tmux')
+        cluster = Cluster.new('tmux', server_name=_TEST_SERVER)
         l = cluster.get_log('exp', 'hello', process_group='group')
         self.assertIn('Hello World!', l)
 
     def test_experiment_preamble(self):
         self.create_default_experiment(exp_preamble=['echo exp preamble'])
-        cluster = Cluster.new('tmux')
+        cluster = Cluster.new('tmux', server_name=_TEST_SERVER)
 
         l = cluster.get_log('exp', 'hello', process_group='group')
         self.assertIn('exp preamble', l)
@@ -282,7 +280,7 @@ class TestTmuxCluster(unittest.TestCase):
     def test_process_group_preamble(self):
         self.create_default_experiment(exp_preamble=['echo exp preamble'],
                                        group_preamble=['echo group preamble'])
-        cluster = Cluster.new('tmux')
+        cluster = Cluster.new('tmux', server_name=_TEST_SERVER)
 
         l = cluster.get_log('exp', 'hello', process_group='group')
         self.assertIn('exp preamble', l)
@@ -298,10 +296,10 @@ class TestTmuxCluster(unittest.TestCase):
     def test_delete(self):
         self.create_default_experiment()
 
-        cluster = Cluster.new('tmux')
+        cluster = Cluster.new('tmux', server_name=_TEST_SERVER)
         with self.assertRaises(ValueError):
-            cluster.delete(None)
-            cluster.delete('')
+            # cluster.delete(None)
+            # cluster.delete('')
             cluster.delete('Irene')
         self.assertListEqual(cluster.list_experiments(), ['exp'])
         cluster.delete('exp')
@@ -338,7 +336,7 @@ class TestTmuxCluster(unittest.TestCase):
         self.assertDictEqual(dump, _TEST_DUMP);
 
     def test_load_dict(self):
-        cluster = Cluster.new('tmux')
+        cluster = Cluster.new('tmux', server_name=_TEST_SERVER)
         exp = tmux.TmuxExperimentSpec.load_dict(_TEST_DUMP)
         group = list(exp.list_process_groups())
         procs = list(exp.list_all_processes())
@@ -348,7 +346,7 @@ class TestTmuxCluster(unittest.TestCase):
         self.assertSetEqual({x.name for x in procs}, {'hello', 'alone'})
 
     def test_serialization_idempotence(self):
-        cluster = Cluster.new('tmux')
+        cluster = Cluster.new('tmux', server_name=_TEST_SERVER)
         exp = self.create_default_experiment(launch=False)
         serialized = exp.dump_dict()
         deserialized = tmux.TmuxExperimentSpec.load_dict(_TEST_DUMP)

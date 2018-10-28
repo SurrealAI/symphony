@@ -388,7 +388,7 @@ class SymphonyParser(object):
         """
         name = args.experiment_name
         if not name:
-            return None
+            return self.cluster.current_experiment()
         name = self._interactive_find_exp(name)
         if not name:
             sys.exit(1)

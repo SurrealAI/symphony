@@ -41,4 +41,4 @@ def test_kube_topdown():
 
     nonagent.image_pull_policy('Always')
 
-    cluster.launch(exp)
+    cluster.launch(exp, dry_run=True)
