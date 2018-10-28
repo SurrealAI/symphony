@@ -1,4 +1,0 @@
-{
-  "test/test_docker_settings.py::test_load_default": true,
-  "test/test_docker_settings.py::test_load_full": true
-}
