@@ -29,7 +29,6 @@ setup(
         "nanolog",
         "docker",
         "pyyaml",
-        "libtmux",
         "benedict>=0.3",
         "nanolog",
     ],
