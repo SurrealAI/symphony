@@ -124,3 +124,5 @@ debug_*
 *.swp
 
 upload.sh
+
+.pytest_cache/
