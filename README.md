@@ -14,7 +14,6 @@ Related docs:
 [Docker builder guide](docs/docker_builder.md)  
 [Kubernetes guide](docs/kubernetes.md)  
 [Tmux guide](docs/tmux.md)  
-(TODO: docker guide)
 
 # Installation
 ```bash
