@@ -11,4 +11,4 @@ server.binds('example')
 client.connects('example')
 
 print('Server and client are running in subprocess mode')
-cluster.launch(exp, dry_run=True)
+cluster.launch(exp, dry_run=False)
