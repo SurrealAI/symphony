@@ -35,8 +35,11 @@ class SubprocCluster(Cluster):
         )
 
     # =================== Private helpers ====================
-    def _launch_process(self, name, p):
-        self._manager.launch(name, p.cmd, p.env)
+    def _launch_process(self, name, p, dry_run):
+        if dry_run:
+            print(p.cmd, '; ENV=', p.env)
+        else:
+            self._manager.launch(name, p.cmd, p.env)
 
     def _join(self):
         self._manager.join(kill_on_error=True)
@@ -57,13 +60,11 @@ class SubprocCluster(Cluster):
             _log(' --> Creating process group', pg.name)
             for p in pg.list_processes():
                 name = pg.name + ':' + p.name
-                if not dry_run:
-                    self._launch_process(name, p)
+                self._launch_process(name, p, dry_run=dry_run)
                 _log(' --> --> Created process', name)
 
         for p in spec.list_processes():
-            if not dry_run:
-                self._launch_process(p.name, p)
+            self._launch_process(p.name, p, dry_run=dry_run)
             _log(' --> Created process', p.name)
 
         self._join()
