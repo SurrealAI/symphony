@@ -19,7 +19,7 @@ class SubprocProcessSpec(ProcessSpec):
         Args:
             env: dict
         """
-        self.env = env
+        self.env.update(env)
 
     def _load_dict(self, di):
         super()._load_dict(di)
