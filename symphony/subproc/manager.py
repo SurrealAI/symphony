@@ -4,6 +4,8 @@ Manages subprocesses launching and polling
 import os
 import subprocess
 import time
+import signal
+import sys
 
 
 class SubprocManager:
@@ -90,13 +92,33 @@ class SubprocManager:
     def poll_all(self):
         return {name: self.poll(name) for name in self.processes}
 
-    def kill(self, name):
+    def kill(self, name, verbose=False):
         if self.poll(name) is None:
-            self.processes[name].kill()
+            proc = self.processes[name]
+            proc.kill()
+            if verbose:
+                print('KILLED', proc.pid)
 
-    def kill_all(self):
+    def kill_all(self, verbose=False):
         for name in self.processes:
-            self.kill(name)
+            self.kill(name, verbose=verbose)
+
+    SIG_DICT = {
+        signal.SIGINT : 'SIGINT',
+        signal.SIGTERM : 'SIGTERM',
+        signal.SIGABRT : 'SIGABRT',
+        signal.SIGILL : 'SIGILL',
+        signal.SIGFPE : 'SIGFPE',
+        signal.SIGSEGV : 'SIGSEGV',
+        signal.SIGQUIT : 'SIGQUIT',
+        signal.SIGHUP : 'SIGHUP',
+    }
+
+    def _signal_handler(self, sig, frame):
+        signame = self.SIG_DICT[sig]
+        print(signame + ' RECEIVED, KILLING ALL REMAINING PROCESSES ...')
+        self.kill_all(verbose=True)
+        sys.exit(0)
 
     def join(self, kill_on_error=True, poll_interval=1.0):
         """
@@ -107,6 +129,8 @@ class SubprocManager:
                 non-zero code.
             poll_interval: seconds between polling
         """
+        for sig in self.SIG_DICT:
+            signal.signal(sig, self._signal_handler)
         remaining_procs = list(self.processes.keys())
         while remaining_procs:
             for name in remaining_procs[:]:
@@ -122,8 +146,8 @@ class SubprocManager:
                         print('PROCESS "{}" TERMINATED WITH ERROR CODE {}'
                               .format(name, retcode))
                         if kill_on_error:
-                            print('KILLING ALL REMAINING PROCEESES')
-                            self.kill_all()
+                            print('KILLING ALL REMAINING PROCEESES ...')
+                            self.kill_all(verbose=True)
                             remaining_procs = []
                             break
             time.sleep(poll_interval)

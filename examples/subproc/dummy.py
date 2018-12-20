@@ -14,7 +14,7 @@ for i in range(n):
     print(i, 'env=', ENV, 'args=', *sys.argv[2:])
     print('err', i, 'env=', ENV, 'args=', *sys.argv[2:],
           file=sys.stderr)
-    if i >= n // 2:
+    if 'throw' in sys.argv and i >= n // 2:
         raise ValueError('{} {}', i, ENV)
 
 print('DONE', *sys.argv[2:])
