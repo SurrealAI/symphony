@@ -22,13 +22,13 @@ class KubeParser(SymphonyParser):
             'client',
             container_image=UPSTREAM_URL+':latest',
             command=['python'],
-            args=['-u', '/run_simple_client.py']
+            args=['-u', '/simple_client.py']
         )
         server = exp.new_process(
             'server',
             container_image=UPSTREAM_URL+':latest',
             command=['python'],
-            args=['-u', '/run_simple_server.py']
+            args=['-u', '/simple_server.py']
         )
         # Good to have when you are doing development
         client.image_pull_policy('Always')

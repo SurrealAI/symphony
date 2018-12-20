@@ -21,4 +21,4 @@ print('Server initialized')
 s = server.socket
 print(s.address, s.host, s.port)
 print('Starting event loop')
-server.start_event_loop(handler, blocking=True)
+server.start_loop(handler, blocking=True)

@@ -12,6 +12,12 @@ from .tmux import (
     TmuxProcessGroupSpec,
     TmuxExperimentSpec,
     )
+from .subproc import (
+    SubprocCluster,
+    SubprocManager,
+    SubprocProcessSpec,
+    SubprocProcessGroupSpec,
+)
 from .spec import (
     ProcessSpec,
     ProcessGroupSpec,

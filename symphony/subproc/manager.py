@@ -15,7 +15,8 @@ class SubprocManager:
         Args:
             stdout_mode: ['print', 'file', 'none']
             stderr_mode: ['print', 'file', 'none', 'stdout']
-            log_dir: if either stdout or stderr mode is file, log_folder cannot be None
+            log_dir: where stdout is saved as <name>.out and stderr as <name>.err
+              if either stdout or stderr mode is file, log_dir cannot be None
         """
         self.stdout_mode = stdout_mode.lower()
         self.stderr_mode = stderr_mode.lower()

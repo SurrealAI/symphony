@@ -6,7 +6,7 @@ This folder contains example for you to run a simple client-server pair on both 
 pip install pyarrow
 ```
 
-* Take a look at `run_simple_client.py`, `run_simple_server.py`, these are the files that we plan to run
+* Take a look at `simple_client.py`, `simple_server.py`, these are the files that we plan to run
 
 * Next, go to `run_tmux.py`. This file runs the server and client on tmux. In line 6 and 7, change the `source activate ...` command to the corresponding ones that activates the correct python environment on your machine (or delete that command if it does not apply). After that, do
 ```bash
