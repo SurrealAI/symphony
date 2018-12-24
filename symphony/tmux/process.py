@@ -24,6 +24,7 @@ class TmuxProcessSpec(ProcessSpec):
             self.cmds = [cmds]
         else:
             self.cmds = list(cmds)
+        self.cmds = ['export SYMPHONY_ROLE={}'.format(name)] + self.cmds
         self.env = {}
 
     def set_envs(self, di):
