@@ -75,7 +75,7 @@ class SubprocManager:
             stdout=stdout,
             stderr=stderr,
             env=env,
-            preexec_fn=os.setsid
+            preexec_fn=os.setsid # put the subprocess in its own process group
         )
         self.processes[name] = proc
         return proc
@@ -96,6 +96,8 @@ class SubprocManager:
     def kill(self, name, signal=signal.SIGTERM, verbose=False):
         if self.poll(name) is None:
             proc = self.processes[name]
+
+            # send the signal to the process group containing grandchildren
             group = os.getpgid(proc.pid)
             os.killpg(group, signal)
             if verbose:
