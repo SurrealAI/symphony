@@ -74,7 +74,8 @@ class SubprocManager:
             universal_newlines=True,  # force text stream
             stdout=stdout,
             stderr=stderr,
-            env=env
+            env=env,
+            preexec_fn=os.setsid
         )
         self.processes[name] = proc
         return proc
@@ -95,9 +96,10 @@ class SubprocManager:
     def kill(self, name, signal=signal.SIGTERM, verbose=False):
         if self.poll(name) is None:
             proc = self.processes[name]
-            os.kill(proc.pid, signal.SIGTERM)
+            group = os.getpgid(proc.pid)
+            os.killpg(group, signal)
             if verbose:
-                print('Sent', self.SIG_DICT[signal], 'to', proc.pid)
+                print('Sent', self.SIG_DICT[signal], 'to group', group)
 
     def kill_all(self, verbose=False):
         for name in self.processes:
