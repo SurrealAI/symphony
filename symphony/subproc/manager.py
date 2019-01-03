@@ -92,16 +92,21 @@ class SubprocManager:
     def poll_all(self):
         return {name: self.poll(name) for name in self.processes}
 
-    def kill(self, name, verbose=False):
+    def kill(self, name, signal=signal.SIGTERM, verbose=False):
         if self.poll(name) is None:
             proc = self.processes[name]
-            proc.kill()
+            os.kill(proc.pid, signal.SIGTERM)
             if verbose:
-                print('KILLED', proc.pid)
+                print('Sent', self.SIG_DICT[signal], 'to', proc.pid)
 
     def kill_all(self, verbose=False):
         for name in self.processes:
             self.kill(name, verbose=verbose)
+        if verbose:
+            print('Making sure all subprocesses terminated...')
+        time.sleep(1)
+        for name in self.processes:
+            self.kill(name, signal=signal.SIGKILL, verbose=verbose)
 
     SIG_DICT = {
         signal.SIGINT : 'SIGINT',
