@@ -74,7 +74,8 @@ class SubprocManager:
             universal_newlines=True,  # force text stream
             stdout=stdout,
             stderr=stderr,
-            env=env
+            env=env,
+            preexec_fn=os.setsid # put the subprocess in its own process group
         )
         self.processes[name] = proc
         return proc
@@ -92,16 +93,24 @@ class SubprocManager:
     def poll_all(self):
         return {name: self.poll(name) for name in self.processes}
 
-    def kill(self, name, verbose=False):
+    def kill(self, name, signal=signal.SIGTERM, verbose=False):
         if self.poll(name) is None:
             proc = self.processes[name]
-            proc.kill()
+
+            # send the signal to the process group containing grandchildren
+            group = os.getpgid(proc.pid)
+            os.killpg(group, signal)
             if verbose:
-                print('KILLED', proc.pid)
+                print('Sent', self.SIG_DICT[signal], 'to group', group)
 
     def kill_all(self, verbose=False):
         for name in self.processes:
             self.kill(name, verbose=verbose)
+        if verbose:
+            print('Making sure all subprocesses terminated...')
+        time.sleep(1)
+        for name in self.processes:
+            self.kill(name, signal=signal.SIGKILL, verbose=verbose)
 
     SIG_DICT = {
         signal.SIGINT : 'SIGINT',
