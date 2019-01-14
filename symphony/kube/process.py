@@ -89,7 +89,7 @@ class KubeProcessSpec(ProcessSpec):
         self.container_yml.mount_host_path(path, mount_path, hostpath_type, name)
 
     def mount_empty_dir(self, name, use_memory, mount_path):
-        self.container_yml.mount_empty_dir(mount_path, use_memory, name)
+        self.container_yml.mount_empty_dir(mount_path=mount_path, use_memory=use_memory, name=name)
 
     def mount_shared_memory(self, name='devshm'):
         """
