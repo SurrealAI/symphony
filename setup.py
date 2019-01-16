@@ -8,7 +8,7 @@ def read(fname):
 
 setup(
     name='symphony',
-    version='0.9.1',
+    version='0.10',
     author='Surreal AI team',
     url='https://github.com/SurrealAI/symphony',
     long_description=read('README.rst'),
@@ -19,7 +19,7 @@ setup(
         package for package in find_packages() if package.startswith("symphony")
     ],
     classifiers=[
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "Environment :: Console",
         "Programming Language :: Python :: 3"
